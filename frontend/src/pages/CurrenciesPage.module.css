@@ -1,0 +1,59 @@
+.page {
+  max-width: 1200px;
+}
+
+.heading {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.35rem;
+}
+
+.sub {
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.15rem;
+}
+
+.card {
+  background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 1.35rem;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: #dbe4ee;
+}
+
+.code {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.name {
+  color: #374151;
+  font-size: 0.92rem;
+  margin-top: 0.3rem;
+}
+
+.country {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin-top: 0.6rem;
+}
+
+.error {
+  color: #f87171;
+}

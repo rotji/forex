@@ -1,4 +1,4 @@
-import { getDb } from "../config/database";
+import { getDb } from "../../config/database";
 
 export function runMigrations(): void {
   const db = getDb();

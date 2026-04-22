@@ -9,7 +9,13 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 router.get("/:code", (req: Request, res: Response) => {
-  const currency = getCurrencyByCode(req.params.code);
+  const code = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
+  if (!code) {
+    res.status(400).json({ error: "Currency code is required" });
+    return;
+  }
+
+  const currency = getCurrencyByCode(code);
   if (!currency) {
     res.status(404).json({ error: "Currency not found" });
     return;

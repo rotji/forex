@@ -14,7 +14,13 @@ router.get("/high-impact", (_req: Request, res: Response) => {
 });
 
 router.get("/currency/:code", (req: Request, res: Response) => {
-  res.json(getEventsByCurrency(req.params.code));
+  const code = Array.isArray(req.params.code) ? req.params.code[0] : req.params.code;
+  if (!code) {
+    res.status(400).json({ error: "Currency code is required" });
+    return;
+  }
+
+  res.json(getEventsByCurrency(code));
 });
 
 export default router;

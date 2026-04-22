@@ -8,7 +8,13 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 router.get("/:pair", (req: Request, res: Response) => {
-  res.json(getTradeSetupsByPair(req.params.pair));
+  const pair = Array.isArray(req.params.pair) ? req.params.pair[0] : req.params.pair;
+  if (!pair) {
+    res.status(400).json({ error: "Pair symbol is required" });
+    return;
+  }
+
+  res.json(getTradeSetupsByPair(pair));
 });
 
 export default router;

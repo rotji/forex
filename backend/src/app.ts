@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { requestLogger } from "./shared/middleware/requestLogger";
+import { httpLogger } from "./shared/middleware/httpLogger";
+import { globalRateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
 import currenciesRouter from "./modules/currencies/currencies.router";
 import pairsRouter from "./modules/currency-pairs/currency-pairs.router";
@@ -10,8 +13,16 @@ import setupsRouter from "./modules/trade-setups/trade-setups.router";
 
 const app = express();
 
+// Security
+app.use(helmet());
 app.use(cors());
+app.use(globalRateLimiter);
+
+// Body parsing
 app.use(express.json());
+
+// Logging
+app.use(httpLogger);
 app.use(requestLogger);
 
 app.get("/health", (_req, res) => {
