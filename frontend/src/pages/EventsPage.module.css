@@ -15,6 +15,109 @@
   margin-bottom: 2rem;
 }
 
+.formCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-soft);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.formTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.85rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1f2937;
+  padding: 0.6rem 0.75rem;
+}
+
+.textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.actions {
+  margin-top: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.button {
+  border: 0;
+  background: var(--accent);
+  color: #ffffff;
+  padding: 0.56rem 0.95rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.buttonSecondary {
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+  padding: 0.56rem 0.95rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.success {
+  color: #166534;
+  font-size: 0.85rem;
+}
+
+.filterCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filterTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.65rem;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.65rem;
+}
+
+.meta {
+  margin-top: 0.65rem;
+  color: var(--text-muted);
+  font-size: 0.83rem;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -43,6 +146,35 @@
 
 .table tr:hover td {
   background: #fbfdff;
+}
+
+.editingRow td {
+  background: #f0fdfa;
+}
+
+.rowActions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.editBtn,
+.deleteBtn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.editBtn {
+  color: #0f766e;
+}
+
+.deleteBtn {
+  color: #b91c1c;
+  border-color: #fecaca;
 }
 
 .impact {

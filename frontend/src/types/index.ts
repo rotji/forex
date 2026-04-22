@@ -67,3 +67,69 @@ export interface TradeSetup {
   created_at: string;
   updated_at: string;
 }
+
+export interface CreateEconomicEventInput {
+  title: string;
+  currency: string;
+  impact: ImpactLevel;
+  scheduledAt: string;
+  actualValue?: string;
+  forecastValue?: string;
+  previousValue?: string;
+  source?: string;
+}
+
+export interface CreateSignalInput {
+  pairSymbol: string;
+  signalType: SignalType;
+  timeframe: Timeframe;
+  strength?: number;
+  reasoning?: string;
+  expiresAt?: string;
+}
+
+export interface CreateTradeSetupInput {
+  signalId?: number;
+  pairSymbol: string;
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit1: number;
+  takeProfit2?: number;
+  takeProfit3?: number;
+  riskRewardRatio?: number;
+  lotSizeSuggestion?: number;
+  notes?: string;
+  status?: TradeStatus;
+}
+
+export interface UpdateEconomicEventInput {
+  title?: string;
+  currency?: string;
+  impact?: ImpactLevel;
+  scheduledAt?: string;
+  actualValue?: string | null;
+  forecastValue?: string | null;
+  previousValue?: string | null;
+  source?: string | null;
+}
+
+export interface UpdateSignalInput {
+  signalType?: SignalType;
+  timeframe?: Timeframe;
+  strength?: number | null;
+  reasoning?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface UpdateTradeSetupInput {
+  pairSymbol?: string;
+  entryPrice?: number;
+  stopLoss?: number;
+  takeProfit1?: number;
+  takeProfit2?: number | null;
+  takeProfit3?: number | null;
+  riskRewardRatio?: number | null;
+  lotSizeSuggestion?: number | null;
+  notes?: string | null;
+  status?: TradeStatus;
+}
