@@ -2,6 +2,8 @@ export type SignalType = "BUY" | "SELL" | "NEUTRAL";
 export type ImpactLevel = "LOW" | "MEDIUM" | "HIGH";
 export type TradeStatus = "PENDING" | "ACTIVE" | "HIT_TP" | "HIT_SL" | "CANCELLED";
 export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
+export type CentralBankTone = "DOVISH" | "NEUTRAL" | "HAWKISH";
+export type BiasLabel = "BULLISH" | "NEUTRAL" | "BEARISH";
 
 export interface Currency {
   id: number;
@@ -132,4 +134,165 @@ export interface UpdateTradeSetupInput {
   lotSizeSuggestion?: number | null;
   notes?: string | null;
   status?: TradeStatus;
+}
+
+export interface MacroIndicator {
+  id: number;
+  indicator_code: string;
+  indicator_name: string;
+  currency: string;
+  value: number | null;
+  previous_value: number | null;
+  forecast_value: number | null;
+  unit: string | null;
+  importance: ImpactLevel;
+  signal_direction: "HIGHER_IS_BULLISH" | "LOWER_IS_BULLISH";
+  period: string | null;
+  released_at: string;
+  source: string | null;
+  created_at: string;
+}
+
+export interface CentralBankEvent {
+  id: number;
+  bank_code: string;
+  bank_name: string;
+  title: string;
+  event_type: "RATE_DECISION" | "SPEECH" | "MINUTES" | "PRESS_CONFERENCE" | "INTERVENTION";
+  currency: string;
+  scheduled_at: string;
+  expected_value: string | null;
+  actual_value: string | null;
+  outcome_tone: CentralBankTone | null;
+  source: string | null;
+  created_at: string;
+}
+
+export interface CurrencyBiasSnapshot {
+  id: number;
+  currency: string;
+  score: number;
+  bias: BiasLabel;
+  confidence: number;
+  drivers: string | null;
+  computed_at: string;
+}
+
+export interface RecomputeBiasResponseRow {
+  currency: string;
+  score: number;
+  bias: BiasLabel;
+  confidence: number;
+  drivers: string;
+  computedAt: string;
+}
+
+export interface RecomputeBiasResponse {
+  count: number;
+  computedAt: string;
+  rows: RecomputeBiasResponseRow[];
+}
+
+export interface TradeAlert {
+  id: number;
+  pair_symbol: string;
+  base_currency: string | null;
+  quote_currency: string | null;
+  direction: SignalType;
+  confidence: number;
+  base_score: number | null;
+  quote_score: number | null;
+  score_diff: number | null;
+  rationale: string | null;
+  triggered_at: string;
+  expires_at: string | null;
+  status: "ACTIVE" | "ACKNOWLEDGED" | "EXPIRED";
+}
+
+export type AlertStatus = "ACTIVE" | "ACKNOWLEDGED" | "EXPIRED" | "ALL";
+
+export interface GenerateAlertsResponseAlert {
+  pairSymbol: string;
+  direction: "BUY" | "SELL";
+  confidence: number;
+  rationale: string;
+  expiresAt: string;
+}
+
+export interface GenerateAlertsResponse {
+  count: number;
+  generatedAt: string;
+  alerts: GenerateAlertsResponseAlert[];
+}
+
+export interface AcknowledgeBulkAlertsResponse {
+  updated: number;
+}
+
+export interface CleanupExpiredAlertsResponse {
+  deleted: number;
+  olderThanDays: number;
+}
+
+export type CurrencyBiasHistoryMap = Record<string, CurrencyBiasSnapshot[]>;
+
+export interface SignalEngineStatus {
+  running: boolean;
+  intervalMs: number | null;
+  lastStartedAt: string | null;
+  lastCompletedAt: string | null;
+  lastDurationMs: number | null;
+  lastExpiredCount: number;
+  lastCleanedCount: number;
+  lastBiasCount: number;
+  lastGeneratedAlertsCount: number;
+  lastError: string | null;
+}
+
+export interface SignalEngineCycleResult {
+  success: boolean;
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  expiredCount: number;
+  cleanedCount: number;
+  biasCount: number;
+  generatedAlertsCount: number;
+  error: string | null;
+}
+
+export interface RunSignalEngineNowResponse {
+  message: string;
+  result: SignalEngineCycleResult;
+  status: SignalEngineStatus;
+}
+
+export interface OpsRunAuditRecord {
+  id: number;
+  trigger_source: string;
+  requested_at: string;
+  completed_at: string | null;
+  success: number;
+  message: string | null;
+  expired_count: number | null;
+  cleaned_count: number | null;
+  bias_count: number | null;
+  generated_alerts_count: number | null;
+  duration_ms: number | null;
+  request_ip: string | null;
+}
+
+export interface OpsHealthSummary {
+  healthy: boolean;
+  dbReachable: boolean;
+  schedulerEnabled: boolean;
+  intervalMs: number | null;
+  lastCompletedAt: string | null;
+  lastCycleAgeSeconds: number | null;
+  stale: boolean;
+  staleThresholdSeconds: number | null;
+  lastDurationMs: number | null;
+  lastError: string | null;
+  healthReason: string | null;
+  opsRunKeyConfigured: boolean;
 }

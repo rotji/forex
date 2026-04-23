@@ -10,6 +10,11 @@ import pairsRouter from "./modules/currency-pairs/currency-pairs.router";
 import eventsRouter from "./modules/economic-events/economic-events.router";
 import signalsRouter from "./modules/signals/signals.router";
 import setupsRouter from "./modules/trade-setups/trade-setups.router";
+import macroIndicatorsRouter from "./modules/macro-indicators/macro-indicators.router";
+import centralBankEventsRouter from "./modules/central-bank-events/central-bank-events.router";
+import currencyBiasRouter from "./modules/currency-bias/currency-bias.router";
+import tradeAlertsRouter from "./modules/trade-alerts/trade-alerts.router";
+import opsRouter from "./modules/ops/ops.router";
 
 const app = express();
 
@@ -34,6 +39,11 @@ app.use("/api/pairs", pairsRouter);
 app.use("/api/events", eventsRouter);
 app.use("/api/signals", signalsRouter);
 app.use("/api/setups", setupsRouter);
+app.use("/api/macro-indicators", macroIndicatorsRouter);
+app.use("/api/central-bank-events", centralBankEventsRouter);
+app.use("/api/currency-bias", currencyBiasRouter);
+app.use("/api/alerts", tradeAlertsRouter);
+app.use("/api/ops", opsRouter);
 
 app.use(errorHandler);
 

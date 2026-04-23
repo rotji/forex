@@ -51,6 +51,9 @@ export function runSeeds(): void {
   const getSignalsCount = db.prepare("SELECT COUNT(*) as total FROM signals");
 
   const getTradeSetupsCount = db.prepare("SELECT COUNT(*) as total FROM trade_setups");
+  const getMacroIndicatorsCount = db.prepare("SELECT COUNT(*) as total FROM macro_indicators");
+  const getCentralBankEventsCount = db.prepare("SELECT COUNT(*) as total FROM central_bank_events");
+  const getCurrencyBiasSnapshotsCount = db.prepare("SELECT COUNT(*) as total FROM currency_bias_snapshots");
 
   const insertEconomicEvent = db.prepare(`
     INSERT INTO economic_events (
@@ -121,6 +124,80 @@ export function runSeeds(): void {
       @lotSizeSuggestion,
       @notes,
       @status
+    )
+  `);
+
+  const insertMacroIndicator = db.prepare(`
+    INSERT INTO macro_indicators (
+      indicator_code,
+      indicator_name,
+      currency,
+      value,
+      previous_value,
+      forecast_value,
+      unit,
+      importance,
+      signal_direction,
+      period,
+      released_at,
+      source
+    ) VALUES (
+      @indicatorCode,
+      @indicatorName,
+      @currency,
+      @value,
+      @previousValue,
+      @forecastValue,
+      @unit,
+      @importance,
+      @signalDirection,
+      @period,
+      @releasedAt,
+      @source
+    )
+  `);
+
+  const insertCentralBankEvent = db.prepare(`
+    INSERT INTO central_bank_events (
+      bank_code,
+      bank_name,
+      title,
+      event_type,
+      currency,
+      scheduled_at,
+      expected_value,
+      actual_value,
+      outcome_tone,
+      source
+    ) VALUES (
+      @bankCode,
+      @bankName,
+      @title,
+      @eventType,
+      @currency,
+      @scheduledAt,
+      @expectedValue,
+      @actualValue,
+      @outcomeTone,
+      @source
+    )
+  `);
+
+  const insertCurrencyBiasSnapshot = db.prepare(`
+    INSERT INTO currency_bias_snapshots (
+      currency,
+      score,
+      bias,
+      confidence,
+      drivers,
+      computed_at
+    ) VALUES (
+      @currency,
+      @score,
+      @bias,
+      @confidence,
+      @drivers,
+      @computedAt
     )
   `);
 
@@ -251,6 +328,123 @@ export function runSeeds(): void {
 
       for (const setup of setups) {
         insertTradeSetup.run(setup);
+      }
+    }
+
+    if (readCount(getMacroIndicatorsCount) === 0) {
+      const indicators = [
+        {
+          indicatorCode: "US_CPI_YOY",
+          indicatorName: "US CPI YoY",
+          currency: "USD",
+          value: 3.1,
+          previousValue: 3.2,
+          forecastValue: 3.2,
+          unit: "%",
+          importance: "HIGH",
+          signalDirection: "LOWER_IS_BULLISH",
+          period: "2026-03",
+          releasedAt: pastDate(6),
+          source: "Manual Seed",
+        },
+        {
+          indicatorCode: "US_NFP",
+          indicatorName: "US Non-Farm Payrolls",
+          currency: "USD",
+          value: 218,
+          previousValue: 179,
+          forecastValue: 190,
+          unit: "K",
+          importance: "HIGH",
+          signalDirection: "HIGHER_IS_BULLISH",
+          period: "2026-03",
+          releasedAt: pastDate(2),
+          source: "Manual Seed",
+        },
+        {
+          indicatorCode: "EU_PMI_COMPOSITE",
+          indicatorName: "Eurozone Composite PMI",
+          currency: "EUR",
+          value: 49.2,
+          previousValue: 48.7,
+          forecastValue: 49,
+          unit: "index",
+          importance: "MEDIUM",
+          signalDirection: "HIGHER_IS_BULLISH",
+          period: "2026-03",
+          releasedAt: pastDate(10),
+          source: "Manual Seed",
+        },
+      ];
+
+      for (const indicator of indicators) {
+        insertMacroIndicator.run(indicator);
+      }
+    }
+
+    if (readCount(getCentralBankEventsCount) === 0) {
+      const bankEvents = [
+        {
+          bankCode: "FED",
+          bankName: "Federal Reserve",
+          title: "FOMC Rate Decision",
+          eventType: "RATE_DECISION",
+          currency: "USD",
+          scheduledAt: futureDate(30),
+          expectedValue: "5.25%",
+          actualValue: null,
+          outcomeTone: "NEUTRAL",
+          source: "Manual Seed",
+        },
+        {
+          bankCode: "ECB",
+          bankName: "European Central Bank",
+          title: "ECB Press Conference",
+          eventType: "PRESS_CONFERENCE",
+          currency: "EUR",
+          scheduledAt: futureDate(20),
+          expectedValue: null,
+          actualValue: null,
+          outcomeTone: "NEUTRAL",
+          source: "Manual Seed",
+        },
+      ];
+
+      for (const bankEvent of bankEvents) {
+        insertCentralBankEvent.run(bankEvent);
+      }
+    }
+
+    if (readCount(getCurrencyBiasSnapshotsCount) === 0) {
+      const biasRows = [
+        {
+          currency: "USD",
+          score: 0.71,
+          bias: "BULLISH",
+          confidence: 0.76,
+          drivers: "Strong labor data and resilient yields",
+          computedAt: new Date().toISOString(),
+        },
+        {
+          currency: "EUR",
+          score: -0.18,
+          bias: "BEARISH",
+          confidence: 0.62,
+          drivers: "Soft growth momentum and cautious ECB tone",
+          computedAt: new Date().toISOString(),
+        },
+        {
+          currency: "JPY",
+          score: -0.08,
+          bias: "NEUTRAL",
+          confidence: 0.55,
+          drivers: "Mixed policy expectations with intervention risk",
+          computedAt: new Date().toISOString(),
+        },
+      ];
+
+      for (const row of biasRows) {
+        insertCurrencyBiasSnapshot.run(row);
       }
     }
   });

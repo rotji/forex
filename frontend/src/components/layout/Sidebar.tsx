@@ -8,6 +8,10 @@ const links = [
   { to: "/events", label: "Economic Events", icon: "📅" },
   { to: "/signals", label: "Signals", icon: "📡" },
   { to: "/setups", label: "Trade Setups", icon: "🎯" },
+  { to: "/macro-indicators", label: "Macro Indicators", icon: "📈" },
+  { to: "/central-bank-events", label: "Central Banks", icon: "🏦" },
+  { to: "/currency-bias", label: "Currency Bias", icon: "🧠" },
+  { to: "/alerts", label: "Trade Alerts", icon: "🚨" },
 ];
 
 export function Sidebar() {

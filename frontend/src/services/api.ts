@@ -28,10 +28,14 @@ function get<T>(path: string): Promise<T> {
   return request<T>(path);
 }
 
-function post<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
+function post<TResponse, TBody>(
+  path: string,
+  body: TBody,
+  options?: { headers?: Record<string, string> },
+): Promise<TResponse> {
   return request<TResponse>(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(options?.headers ?? {}) },
     body: JSON.stringify(body),
   });
 }
