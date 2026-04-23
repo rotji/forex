@@ -96,6 +96,22 @@ export function RiskSentimentPage() {
     });
   }, [data, searchText, regimeFilter]);
 
+  const latestSnapshot = useMemo(() => (data ?? [])[0] ?? null, [data]);
+
+  const toneSurface: Record<BiasLabel, string> = {
+    BULLISH: "#dcfce7",
+    NEUTRAL: "#fef3c7",
+    BEARISH: "#fee2e2",
+  };
+
+  const vixStatus = useMemo(() => {
+    const vix = latestSnapshot?.vix_level;
+    if (vix == null) return { label: "N/A", color: "#64748b" };
+    if (vix < 16) return { label: "Calm", color: "#166534" };
+    if (vix < 24) return { label: "Balanced", color: "#92400e" };
+    return { label: "Stressed", color: "#991b1b" };
+  }, [latestSnapshot?.vix_level]);
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSubmitError(null);
@@ -147,6 +163,56 @@ export function RiskSentimentPage() {
     <div className={styles.page}>
       <h1 className={styles.heading}>Risk Sentiment</h1>
       <p className={styles.sub}>Manual market regime inputs for risk-on, risk-off, and USD liquidity tone</p>
+
+      <section className={styles.filterCard}>
+        <h2 className={styles.filterTitle}>Sentiment Dashboard</h2>
+        {!latestSnapshot ? (
+          <p className={styles.meta}>No snapshots yet. Add a snapshot to populate dashboard status.</p>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.7rem", marginBottom: "0.8rem" }}>
+              <div style={{ border: "1px solid var(--border)", borderRadius: "10px", background: "#ffffff", padding: "0.65rem" }}>
+                <p className={styles.meta} style={{ marginTop: 0 }}>Regime</p>
+                <p style={{ marginTop: "0.2rem" }}>
+                  <span className={`${styles.impact} ${regimeClass[latestSnapshot.regime]}`}>{latestSnapshot.regime}</span>
+                </p>
+              </div>
+              <div style={{ border: "1px solid var(--border)", borderRadius: "10px", background: "#ffffff", padding: "0.65rem" }}>
+                <p className={styles.meta} style={{ marginTop: 0 }}>VIX Level</p>
+                <p style={{ marginTop: "0.25rem", fontSize: "1.05rem", fontWeight: 700 }}>
+                  {latestSnapshot.vix_level ?? "-"}
+                </p>
+                <p style={{ marginTop: "0.2rem", fontSize: "0.8rem", fontWeight: 700, color: vixStatus.color }}>{vixStatus.label}</p>
+              </div>
+              <div style={{ border: "1px solid var(--border)", borderRadius: "10px", background: "#ffffff", padding: "0.65rem" }}>
+                <p className={styles.meta} style={{ marginTop: 0 }}>Recorded</p>
+                <p style={{ marginTop: "0.25rem", fontSize: "0.88rem", fontWeight: 600 }}>
+                  {new Date(latestSnapshot.recorded_at).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.7rem" }}>
+              <div style={{ border: "1px solid #bbf7d0", borderRadius: "10px", background: toneSurface[latestSnapshot.dxy_bias], padding: "0.65rem" }}>
+                <p className={styles.meta} style={{ marginTop: 0 }}>DXY Bias</p>
+                <p style={{ marginTop: "0.25rem" }}><span className={`${styles.impact} ${toneClass[latestSnapshot.dxy_bias]}`}>{latestSnapshot.dxy_bias}</span></p>
+              </div>
+              <div style={{ border: "1px solid #bbf7d0", borderRadius: "10px", background: toneSurface[latestSnapshot.yields_bias], padding: "0.65rem" }}>
+                <p className={styles.meta} style={{ marginTop: 0 }}>US Yields</p>
+                <p style={{ marginTop: "0.25rem" }}><span className={`${styles.impact} ${toneClass[latestSnapshot.yields_bias]}`}>{latestSnapshot.yields_bias}</span></p>
+              </div>
+              <div style={{ border: "1px solid #bbf7d0", borderRadius: "10px", background: toneSurface[latestSnapshot.equities_tone], padding: "0.65rem" }}>
+                <p className={styles.meta} style={{ marginTop: 0 }}>Equities</p>
+                <p style={{ marginTop: "0.25rem" }}><span className={`${styles.impact} ${toneClass[latestSnapshot.equities_tone]}`}>{latestSnapshot.equities_tone}</span></p>
+              </div>
+              <div style={{ border: "1px solid #bbf7d0", borderRadius: "10px", background: toneSurface[latestSnapshot.commodities_tone], padding: "0.65rem" }}>
+                <p className={styles.meta} style={{ marginTop: 0 }}>Commodities</p>
+                <p style={{ marginTop: "0.25rem" }}><span className={`${styles.impact} ${toneClass[latestSnapshot.commodities_tone]}`}>{latestSnapshot.commodities_tone}</span></p>
+              </div>
+            </div>
+          </>
+        )}
+      </section>
 
       <form className={styles.formCard} onSubmit={handleSubmit}>
         <h2 className={styles.formTitle}>{editingId !== null ? "Edit Risk Sentiment Snapshot" : "Add Risk Sentiment Snapshot"}</h2>

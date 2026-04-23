@@ -224,6 +224,73 @@
 
 .error { color: #f87171; }
 
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.75rem;
+}
+
+.calendarDayCard {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.65rem;
+}
+
+.calendarDayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.55rem;
+}
+
+.calendarDayTitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.calendarDayCount {
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+}
+
+.calendarList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.calendarEventRow {
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  padding: 0.42rem 0.5rem;
+  background: #fcfdff;
+}
+
+.calendarEventTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.calendarTime {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.calendarEventTitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
 @media (max-width: 720px) {
   .table {
     display: block;

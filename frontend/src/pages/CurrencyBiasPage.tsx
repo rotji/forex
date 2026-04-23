@@ -109,6 +109,7 @@ export function CurrencyBiasPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [expandedCurrency, setExpandedCurrency] = useState<string | null>(null);
+  const [topCount, setTopCount] = useState<4 | 8 | 12>(8);
 
   const filtered = useMemo(() => {
     const q = searchText.trim().toLowerCase();
@@ -120,8 +121,8 @@ export function CurrencyBiasPage() {
   const trendRows = useMemo(() => {
     return [...filtered]
       .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
-      .slice(0, 8);
-  }, [filtered]);
+      .slice(0, topCount);
+  }, [filtered, topCount]);
 
   function sparklinePoints(currency: string): string {
     const rows = (history.data?.[currency] ?? []).slice().reverse();
@@ -207,6 +208,17 @@ export function CurrencyBiasPage() {
               <option value={7}>7</option>
               <option value={14}>14</option>
               <option value={30}>30</option>
+            </select>
+            <span className={styles.meta} style={{ marginTop: 0 }}>Top</span>
+            <select
+              className={styles.select}
+              style={{ minWidth: "88px", padding: "0.42rem 0.62rem" }}
+              value={topCount}
+              onChange={(e) => setTopCount(Number(e.target.value) as 4 | 8 | 12)}
+            >
+              <option value={4}>4</option>
+              <option value={8}>8</option>
+              <option value={12}>12</option>
             </select>
           </div>
         </div>

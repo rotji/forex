@@ -6,6 +6,7 @@ const primaryLinks = [
   { to: "/", label: "Dashboard", icon: "📊" },
   { to: "/currencies", label: "Currencies", icon: "💱" },
   { to: "/pairs", label: "Pairs", icon: "🔗" },
+  { to: "/events", label: "Events Calendar", icon: "📅" },
 ];
 
 const marketInputLinks = [
@@ -32,7 +33,7 @@ export function Sidebar() {
   const marketInputsActive = marketInputLinks.some((link) => location.pathname.startsWith(link.to));
   const engineActive = engineLinks.some((link) => location.pathname.startsWith(link.to));
   const tradeOutputActive = tradeOutputLinks.some((link) => location.pathname.startsWith(link.to));
-  const [marketInputsOpen, setMarketInputsOpen] = useState(marketInputsActive);
+  const [marketInputsOpen, setMarketInputsOpen] = useState(true);
   const [engineOpen, setEngineOpen] = useState(engineActive);
   const [tradeOutputOpen, setTradeOutputOpen] = useState(tradeOutputActive);
 

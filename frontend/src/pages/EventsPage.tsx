@@ -13,6 +13,7 @@ const impactClass: Record<string, string> = {
 export function EventsPage() {
   const fetcher = useCallback(() => eventsService.getUpcoming(), []);
   const { data, loading, error, refetch } = useQuery<EconomicEvent[]>(fetcher);
+  const [viewMode, setViewMode] = useState<"BOTH" | "CALENDAR" | "TABLE">("BOTH");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -89,6 +90,24 @@ export function EventsPage() {
       return matchesQuery && matchesCurrency && matchesImpact;
     });
   }, [data, searchText, currencyFilter, impactFilter]);
+
+  const calendarDays = useMemo(() => {
+    const groups = new Map<string, EconomicEvent[]>();
+    for (const event of filteredEvents) {
+      const dt = new Date(event.scheduled_at);
+      const dateKey = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+      const current = groups.get(dateKey) ?? [];
+      current.push(event);
+      groups.set(dateKey, current);
+    }
+
+    return Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([dateKey, events]) => ({
+        dateKey,
+        events: [...events].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()),
+      }));
+  }, [filteredEvents]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -215,10 +234,68 @@ export function EventsPage() {
             <option value="HIGH">HIGH</option>
           </select>
         </div>
+        <div className={styles.actions}>
+          <button
+            className={viewMode === "CALENDAR" ? styles.button : styles.buttonSecondary}
+            type="button"
+            onClick={() => setViewMode("CALENDAR")}
+          >
+            Calendar Only
+          </button>
+          <button
+            className={viewMode === "TABLE" ? styles.button : styles.buttonSecondary}
+            type="button"
+            onClick={() => setViewMode("TABLE")}
+          >
+            Table Only
+          </button>
+          <button
+            className={viewMode === "BOTH" ? styles.button : styles.buttonSecondary}
+            type="button"
+            onClick={() => setViewMode("BOTH")}
+          >
+            Both
+          </button>
+        </div>
         <p className={styles.meta}>Showing {filteredEvents.length} of {data?.length ?? 0} events</p>
       </section>
 
-      {filteredEvents.length === 0 ? (
+      {viewMode !== "TABLE" && (
+        <section className={styles.filterCard}>
+          <h2 className={styles.filterTitle}>Macro Calendar View</h2>
+          {calendarDays.length === 0 ? (
+            <p className={styles.meta}>No upcoming events for current filters.</p>
+          ) : (
+            <div className={styles.calendarGrid}>
+              {calendarDays.map((day) => {
+                const dayDate = new Date(`${day.dateKey}T00:00:00`);
+                const label = dayDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+                return (
+                  <article key={day.dateKey} className={styles.calendarDayCard}>
+                    <div className={styles.calendarDayHeader}>
+                      <h3 className={styles.calendarDayTitle}>{label}</h3>
+                      <span className={styles.calendarDayCount}>{day.events.length}</span>
+                    </div>
+                    <div className={styles.calendarList}>
+                      {day.events.map((event) => (
+                        <div key={event.id} className={styles.calendarEventRow}>
+                          <div className={styles.calendarEventTop}>
+                            <span className={styles.calendarTime}>{new Date(event.scheduled_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                            <span className={`${styles.impact} ${impactClass[event.impact] ?? ""}`}>{event.impact}</span>
+                          </div>
+                          <p className={styles.calendarEventTitle}><strong>{event.currency}</strong> {event.title}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {viewMode === "CALENDAR" ? null : filteredEvents.length === 0 ? (
         <p>No upcoming events found.</p>
       ) : (
         <table className={styles.table}>
