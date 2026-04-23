@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "../hooks/useQuery";
 import { currenciesService } from "../services/currencies.service";
 import { pairsService } from "../services/pairs.service";
@@ -8,6 +8,7 @@ import { currencyBiasService } from "../services/currency-bias.service";
 import { alertsService } from "../services/alerts.service";
 import { opsService } from "../services/ops.service";
 import type {
+  BiasBreakdown,
   Currency,
   CurrencyPair,
   Signal,
@@ -22,10 +23,49 @@ import type {
 } from "../types";
 import styles from "./DashboardPage.module.css";
 
+function parseBreakdown(raw: string | null): BiasBreakdown | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as BiasBreakdown;
+  } catch {
+    return null;
+  }
+}
+
+function explainabilityTotal(breakdown: BiasBreakdown): number {
+  return breakdown.macro + breakdown.events + breakdown.centralBank + breakdown.riskSentiment + breakdown.positioning;
+}
+
+function contributionWidth(value: number): number {
+  const maxContribution = 0.5;
+  return Math.min(Math.abs(value) / maxContribution, 1) * 50;
+}
+
+function formatMinutesAgo(totalMinutes: number): string {
+  if (totalMinutes < 1) return "just now";
+  if (totalMinutes < 60) return `${totalMinutes}m ago`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours < 24) return minutes === 0 ? `${hours}h ago` : `${hours}h ${minutes}m ago`;
+  const days = Math.floor(hours / 24);
+  const hourRemainder = hours % 24;
+  return hourRemainder === 0 ? `${days}d ago` : `${days}d ${hourRemainder}h ago`;
+}
+
+function formatSecondsSinceMs(ms: number): string {
+  const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+  if (seconds < 60) return `updated ${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `updated ${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `updated ${hours}h ago`;
+}
+
 export function DashboardPage() {
   const [opsRunKey, setOpsRunKey] = useState("");
   const [runningNow, setRunningNow] = useState(false);
   const [ingestingNow, setIngestingNow] = useState(false);
+  const [freshnessTickAt, setFreshnessTickAt] = useState(Date.now());
   const [runNowMessage, setRunNowMessage] = useState<string | null>(null);
   const [runNowError, setRunNowError] = useState<string | null>(null);
   const [ingestionMessage, setIngestionMessage] = useState<string | null>(null);
@@ -59,6 +99,22 @@ export function DashboardPage() {
   const strongest = (bias.data ?? []).slice(0, 3);
   const weakest = [...(bias.data ?? [])].slice(-3).reverse();
   const topAlerts = (alerts.data ?? []).slice(0, 3);
+  const explainabilityRows = [...strongest.slice(0, 2), ...weakest.slice(0, 2)];
+  const freshnessMinutes = useMemo(() => {
+    const snapshots = bias.data ?? [];
+    if (snapshots.length === 0) return null;
+    const latestMs = snapshots.reduce<number>((maxMs, row) => {
+      const parsed = Date.parse(row.computed_at);
+      if (Number.isNaN(parsed)) return maxMs;
+      return Math.max(maxMs, parsed);
+    }, Number.NEGATIVE_INFINITY);
+    if (!Number.isFinite(latestMs)) return null;
+    return Math.max(0, Math.floor((freshnessTickAt - latestMs) / 60000));
+  }, [bias.data, freshnessTickAt]);
+  const missingBreakdownCount = useMemo(
+    () => (bias.data ?? []).filter((row) => !parseBreakdown(row.breakdown)).length,
+    [bias.data],
+  );
 
   function sparklinePoints(currency: string): string {
     const rows = (biasHistory.data?.[currency] ?? []).slice().reverse();
@@ -152,6 +208,16 @@ export function DashboardPage() {
     };
   }, [opsAutoRefreshEnabled, opsHealth.refetch, signalEngine.refetch, ingestionRuns.refetch]);
 
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setFreshnessTickAt(Date.now());
+    }, 30000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
+
   return (
     <div className={styles.page}>
       <h1 className={styles.heading}>Dashboard</h1>
@@ -234,6 +300,103 @@ export function DashboardPage() {
                 </li>
               ))}
             </ul>
+          )}
+        </section>
+
+        <section className={styles.insightCard}>
+          <h2 className={styles.insightTitle}>Bias Explainability</h2>
+          <div className={styles.badgeRow}>
+            {freshnessMinutes === null ? (
+              <span className={`${styles.badge} ${styles.badgeStale}`}>Recompute age unknown</span>
+            ) : freshnessMinutes <= 60 ? (
+              <span className={`${styles.badge} ${styles.badgeGood}`}>
+                Fresh: {formatMinutesAgo(freshnessMinutes)}
+              </span>
+            ) : freshnessMinutes <= 240 ? (
+              <span className={`${styles.badge} ${styles.badgeWarn}`}>
+                Aging: {formatMinutesAgo(freshnessMinutes)}
+              </span>
+            ) : (
+              <span className={`${styles.badge} ${styles.badgeStale}`}>
+                Stale: {formatMinutesAgo(freshnessMinutes)}
+              </span>
+            )}
+
+            {missingBreakdownCount === 0 ? (
+              <span className={`${styles.badge} ${styles.badgeGood}`}>Breakdown complete</span>
+            ) : (
+              <span className={`${styles.badge} ${styles.badgeWarn}`}>
+                Missing breakdown: {missingBreakdownCount}
+              </span>
+            )}
+          </div>
+          <p className={styles.meta}>
+            <span key={freshnessTickAt} className={styles.freshnessTimestamp}>{formatSecondsSinceMs(freshnessTickAt)}</span>.
+          </p>
+          {explainabilityRows.length === 0 ? (
+            <p className={styles.meta}>No bias rows yet.</p>
+          ) : (
+            <div className={styles.explainabilityList}>
+              {explainabilityRows.map((row) => {
+                const breakdown = parseBreakdown(row.breakdown);
+                if (!breakdown) {
+                  return (
+                    <article key={row.id} className={styles.explainabilityCard}>
+                      <div className={styles.explainabilityHead}>
+                        <strong className={styles.code}>{row.currency}</strong>
+                        <span className={styles.score}>{row.score.toFixed(2)}</span>
+                      </div>
+                      <p className={styles.meta}>Run Recompute Bias to populate contribution bars.</p>
+                    </article>
+                  );
+                }
+
+                const items = [
+                  { label: "Macro", value: breakdown.macro },
+                  { label: "Events", value: breakdown.events },
+                  { label: "Central Bank", value: breakdown.centralBank },
+                  { label: "Risk", value: breakdown.riskSentiment },
+                  { label: "Positioning", value: breakdown.positioning },
+                ];
+
+                return (
+                  <article key={row.id} className={styles.explainabilityCard}>
+                    <div className={styles.explainabilityHead}>
+                      <strong className={styles.code}>{row.currency}</strong>
+                      <span className={styles.score}>{row.score.toFixed(2)}</span>
+                    </div>
+                    <div className={styles.explainabilityBars}>
+                      {items.map((item) => {
+                        const widthPct = contributionWidth(item.value);
+                        const positive = item.value >= 0;
+                        return (
+                          <div key={`${row.id}-${item.label}`} className={styles.explainabilityBarRow}>
+                            <span className={styles.explainabilityLabel}>{item.label}</span>
+                            <div className={styles.explainabilityTrack}>
+                              <div
+                                className={`${styles.explainabilityFill} ${positive ? styles.explainabilityPositive : styles.explainabilityNegative}`}
+                                style={{
+                                  left: positive ? "50%" : `calc(50% - ${widthPct}%)`,
+                                  width: `${widthPct}%`,
+                                }}
+                              />
+                              <div className={styles.explainabilityMidline} />
+                            </div>
+                            <span className={`${styles.explainabilityValue} ${positive ? styles.explainabilityPositiveText : styles.explainabilityNegativeText}`}>
+                              {item.value > 0 ? "+" : ""}{item.value.toFixed(3)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className={styles.explainabilityFoot}>
+                      <span>Total pre-clamp</span>
+                      <strong>{explainabilityTotal(breakdown).toFixed(3)}</strong>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           )}
         </section>
 
