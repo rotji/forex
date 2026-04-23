@@ -15,6 +15,7 @@ import type {
   CurrencyBiasSnapshot,
   TradeAlert,
   CurrencyBiasHistoryMap,
+  IngestionRunRecord,
   OpsHealthSummary,
   OpsRunAuditRecord,
   SignalEngineStatus,
@@ -24,8 +25,11 @@ import styles from "./DashboardPage.module.css";
 export function DashboardPage() {
   const [opsRunKey, setOpsRunKey] = useState("");
   const [runningNow, setRunningNow] = useState(false);
+  const [ingestingNow, setIngestingNow] = useState(false);
   const [runNowMessage, setRunNowMessage] = useState<string | null>(null);
   const [runNowError, setRunNowError] = useState<string | null>(null);
+  const [ingestionMessage, setIngestionMessage] = useState<string | null>(null);
+  const [ingestionError, setIngestionError] = useState<string | null>(null);
   const [opsAutoRefreshEnabled, setOpsAutoRefreshEnabled] = useState(true);
 
   const fetchCurrencies = useCallback(() => currenciesService.getAll(), []);
@@ -38,6 +42,7 @@ export function DashboardPage() {
   const fetchSignalEngineStatus = useCallback(() => opsService.getSignalEngineStatus(), []);
   const fetchOpsHealth = useCallback(() => opsService.getHealthSummary(), []);
   const fetchSignalEngineRuns = useCallback(() => opsService.getRecentSignalEngineRuns(5), []);
+  const fetchIngestionRuns = useCallback(() => opsService.getRecentIngestionRuns(5), []);
 
   const currencies = useQuery<Currency[]>(fetchCurrencies);
   const pairs = useQuery<CurrencyPair[]>(fetchPairs);
@@ -49,6 +54,7 @@ export function DashboardPage() {
   const signalEngine = useQuery<SignalEngineStatus>(fetchSignalEngineStatus);
   const opsHealth = useQuery<OpsHealthSummary>(fetchOpsHealth);
   const signalRuns = useQuery<OpsRunAuditRecord[]>(fetchSignalEngineRuns);
+  const ingestionRuns = useQuery<IngestionRunRecord[]>(fetchIngestionRuns);
 
   const strongest = (bias.data ?? []).slice(0, 3);
   const weakest = [...(bias.data ?? [])].slice(-3).reverse();
@@ -94,6 +100,7 @@ export function DashboardPage() {
       opsHealth.refetch();
       signalEngine.refetch();
       signalRuns.refetch();
+      ingestionRuns.refetch();
       alerts.refetch();
       bias.refetch();
     } catch (err: unknown) {
@@ -101,6 +108,30 @@ export function DashboardPage() {
       setRunNowMessage(null);
     } finally {
       setRunningNow(false);
+    }
+  }
+
+  async function handleRunIngestionNow(): Promise<void> {
+    if (!opsRunKey.trim()) {
+      setIngestionError("Enter operations key");
+      setIngestionMessage(null);
+      return;
+    }
+
+    try {
+      setIngestingNow(true);
+      setIngestionError(null);
+      setIngestionMessage(null);
+      const result = await opsService.runIngestionNow(opsRunKey.trim());
+      setIngestionMessage(result.message);
+      opsHealth.refetch();
+      signalEngine.refetch();
+      ingestionRuns.refetch();
+    } catch (err: unknown) {
+      setIngestionError(err instanceof Error ? err.message : "Failed to run ingestion cycle");
+      setIngestionMessage(null);
+    } finally {
+      setIngestingNow(false);
     }
   }
 
@@ -113,12 +144,13 @@ export function DashboardPage() {
     const timerId = window.setInterval(() => {
       opsHealth.refetch();
       signalEngine.refetch();
+      ingestionRuns.refetch();
     }, refreshIntervalMs);
 
     return () => {
       window.clearInterval(timerId);
     };
-  }, [opsAutoRefreshEnabled, opsHealth.refetch, signalEngine.refetch]);
+  }, [opsAutoRefreshEnabled, opsHealth.refetch, signalEngine.refetch, ingestionRuns.refetch]);
 
   return (
     <div className={styles.page}>
@@ -253,6 +285,8 @@ export function DashboardPage() {
           </div>
           {runNowMessage && <p className={styles.opsSuccess}>{runNowMessage}</p>}
           {runNowError && <p className={styles.opsError}>{runNowError}</p>}
+          {ingestionMessage && <p className={styles.opsSuccess}>{ingestionMessage}</p>}
+          {ingestionError && <p className={styles.opsError}>{ingestionError}</p>}
           {opsHealth.error && <p className={styles.opsError}>Failed to load operations health.</p>}
           {opsHealth.data && (
             <>
@@ -279,6 +313,8 @@ export function DashboardPage() {
                 <li className={styles.opsItem}><span>Scheduler</span><strong>{opsHealth.data.schedulerEnabled ? "Enabled" : "Disabled"}</strong></li>
                 <li className={styles.opsItem}><span>Last Cycle Age</span><strong>{opsHealth.data.lastCycleAgeSeconds != null ? `${opsHealth.data.lastCycleAgeSeconds}s` : "-"}</strong></li>
                 <li className={styles.opsItem}><span>Stale Threshold</span><strong>{opsHealth.data.staleThresholdSeconds != null ? `${opsHealth.data.staleThresholdSeconds}s` : "-"}</strong></li>
+                <li className={styles.opsItem}><span>Ingestion Age</span><strong>{opsHealth.data.lastIngestionAgeSeconds != null ? `${opsHealth.data.lastIngestionAgeSeconds}s` : "-"}</strong></li>
+                <li className={styles.opsItem}><span>Ingestion Provider</span><strong>{opsHealth.data.lastIngestionProvider ?? "-"}</strong></li>
                 <li className={styles.opsItem}><span>Run Key</span><strong>{opsHealth.data.opsRunKeyConfigured ? "Configured" : "Missing"}</strong></li>
               </ul>
             </>
@@ -298,6 +334,54 @@ export function DashboardPage() {
               {signalEngine.data.lastError && (
                 <li className={styles.opsItem}><span>Last Error</span><strong className={styles.errorText}>{signalEngine.data.lastError}</strong></li>
               )}
+              {signalEngine.data.lastIngestionError && (
+                <li className={styles.opsItem}><span>Ingestion Error</span><strong className={styles.errorText}>{signalEngine.data.lastIngestionError}</strong></li>
+              )}
+            </ul>
+          )}
+
+          <div className={styles.auditHeaderRow}>
+            <h3 className={styles.auditTitle}>Recent Ingestion Runs</h3>
+            <div className={styles.opsActions}>
+              <button
+                type="button"
+                className={styles.opsRunButton}
+                onClick={handleRunIngestionNow}
+                disabled={ingestingNow || !opsRunKey.trim()}
+              >
+                {ingestingNow ? "Running..." : "Run Ingestion"}
+              </button>
+              <button
+                type="button"
+                className={styles.opsRefreshButton}
+                onClick={ingestionRuns.refetch}
+                disabled={ingestionRuns.loading}
+              >
+                {ingestionRuns.loading ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+          </div>
+          {!ingestionRuns.data || ingestionRuns.data.length === 0 ? (
+            <p className={styles.meta}>No ingestion runs yet.</p>
+          ) : (
+            <ul className={styles.auditList}>
+              {ingestionRuns.data.map((run) => (
+                <li key={run.id} className={styles.auditItem}>
+                  <div className={styles.auditRowTop}>
+                    <span className={run.success ? styles.auditSuccess : styles.auditFailure}>
+                      {run.success ? "SUCCESS" : "FAIL"}
+                    </span>
+                    <span className={styles.meta}>{new Date(run.started_at).toLocaleString()}</span>
+                  </div>
+                  <div className={styles.auditCounts}>
+                    <span>Provider {run.provider}</span>
+                    <span>Macro +{run.macro_inserted} ~{run.macro_updated}</span>
+                    <span>CB +{run.cb_inserted} ~{run.cb_updated}</span>
+                    <span>Skipped {run.macro_skipped + run.cb_skipped}</span>
+                  </div>
+                  {run.error_message && <div className={styles.meta}>{run.error_message}</div>}
+                </li>
+              ))}
             </ul>
           )}
 

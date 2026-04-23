@@ -242,6 +242,16 @@ export interface SignalEngineStatus {
   lastStartedAt: string | null;
   lastCompletedAt: string | null;
   lastDurationMs: number | null;
+  lastIngestionAt: string | null;
+  lastIngestionProvider: string | null;
+  lastIngestionFetchedAt: string | null;
+  lastIngestionMacroInserted: number;
+  lastIngestionMacroUpdated: number;
+  lastIngestionMacroSkipped: number;
+  lastIngestionCbInserted: number;
+  lastIngestionCbUpdated: number;
+  lastIngestionCbSkipped: number;
+  lastIngestionError: string | null;
   lastExpiredCount: number;
   lastCleanedCount: number;
   lastBiasCount: number;
@@ -289,10 +299,116 @@ export interface OpsHealthSummary {
   intervalMs: number | null;
   lastCompletedAt: string | null;
   lastCycleAgeSeconds: number | null;
+  lastIngestionAt: string | null;
+  lastIngestionAgeSeconds: number | null;
+  lastIngestionProvider: string | null;
+  lastIngestionFetchedAt: string | null;
+  lastIngestionMacroInserted: number;
+  lastIngestionMacroUpdated: number;
+  lastIngestionMacroSkipped: number;
+  lastIngestionCbInserted: number;
+  lastIngestionCbUpdated: number;
+  lastIngestionCbSkipped: number;
+  lastIngestionError: string | null;
   stale: boolean;
   staleThresholdSeconds: number | null;
   lastDurationMs: number | null;
   lastError: string | null;
   healthReason: string | null;
   opsRunKeyConfigured: boolean;
+}
+
+export interface IngestionRunRecord {
+  id: number;
+  provider: string;
+  started_at: string;
+  completed_at: string | null;
+  success: number;
+  macro_inserted: number;
+  macro_updated: number;
+  macro_skipped: number;
+  cb_inserted: number;
+  cb_updated: number;
+  cb_skipped: number;
+  error_message: string | null;
+  fetched_at: string | null;
+  created_at: string;
+}
+
+export interface IngestionCycleResult {
+  success: boolean;
+  provider: string;
+  startedAt: string;
+  completedAt: string;
+  fetchedAt: string | null;
+  macroInserted: number;
+  macroUpdated: number;
+  macroSkipped: number;
+  cbInserted: number;
+  cbUpdated: number;
+  cbSkipped: number;
+  error: string | null;
+}
+
+export interface RunIngestionNowResponse {
+  message: string;
+  result: IngestionCycleResult;
+  status: SignalEngineStatus;
+  runs: IngestionRunRecord[];
+}
+
+export interface CreateMacroIndicatorInput {
+  indicator_code: string;
+  indicator_name: string;
+  currency: string;
+  value?: number | null;
+  previous_value?: number | null;
+  forecast_value?: number | null;
+  unit?: string | null;
+  importance: ImpactLevel;
+  signal_direction: "HIGHER_IS_BULLISH" | "LOWER_IS_BULLISH";
+  period?: string | null;
+  released_at: string;
+  source?: string | null;
+}
+
+export interface UpdateMacroIndicatorInput {
+  indicator_code?: string;
+  indicator_name?: string;
+  currency?: string;
+  value?: number | null;
+  previous_value?: number | null;
+  forecast_value?: number | null;
+  unit?: string | null;
+  importance?: ImpactLevel;
+  signal_direction?: "HIGHER_IS_BULLISH" | "LOWER_IS_BULLISH";
+  period?: string | null;
+  released_at?: string;
+  source?: string | null;
+}
+
+export interface CreateCentralBankEventInput {
+  bank_code: string;
+  bank_name: string;
+  title: string;
+  event_type: "RATE_DECISION" | "SPEECH" | "MINUTES" | "PRESS_CONFERENCE" | "INTERVENTION";
+  currency: string;
+  scheduled_at: string;
+  expected_value?: string | null;
+  actual_value?: string | null;
+  outcome_tone?: CentralBankTone | null;
+  source?: string | null;
+}
+
+export interface UpdateCentralBankEventInput {
+  bank_code?: string;
+  bank_name?: string;
+  title?: string;
+  event_type?: "RATE_DECISION" | "SPEECH" | "MINUTES" | "PRESS_CONFERENCE" | "INTERVENTION";
+  currency?: string;
+  scheduled_at?: string;
+  expected_value?: string | null;
+  actual_value?: string | null;
+  outcome_tone?: CentralBankTone | null;
+  source?: string | null;
 }

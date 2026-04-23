@@ -4,6 +4,7 @@ import { runSignalEngineCycle } from "../../jobs/signalEngineScheduler";
 import { env } from "../../config/env";
 import { createOpsRunAudit, listRecentOpsRunAudit } from "./ops.service";
 import { getDb } from "../../config/database";
+import { listRecentIngestionRuns, runIngestionCycle } from "../ingestion/ingestion.service";
 
 const router = Router();
 
@@ -19,9 +20,14 @@ router.get("/health", (_req: Request, res: Response) => {
 
   const nowMs = Date.now();
   const lastCompletedAtMs = status.lastCompletedAt ? new Date(status.lastCompletedAt).getTime() : null;
+  const lastIngestionAtMs = status.lastIngestionAt ? new Date(status.lastIngestionAt).getTime() : null;
   const lastCycleAgeSeconds =
     lastCompletedAtMs && Number.isFinite(lastCompletedAtMs)
       ? Math.max(0, Math.floor((nowMs - lastCompletedAtMs) / 1000))
+      : null;
+  const lastIngestionAgeSeconds =
+    lastIngestionAtMs && Number.isFinite(lastIngestionAtMs)
+      ? Math.max(0, Math.floor((nowMs - lastIngestionAtMs) / 1000))
       : null;
   const intervalSeconds =
     status.intervalMs != null && status.intervalMs > 0 ? Math.floor(status.intervalMs / 1000) : null;
@@ -38,6 +44,8 @@ router.get("/health", (_req: Request, res: Response) => {
     healthReason = "Scheduler is disabled";
   } else if (stale) {
     healthReason = "Signal engine cycle is stale";
+  } else if (status.lastIngestionError) {
+    healthReason = "Latest ingestion run failed";
   } else if (status.lastError) {
     healthReason = "Last signal engine cycle failed";
   }
@@ -51,6 +59,17 @@ router.get("/health", (_req: Request, res: Response) => {
     intervalMs: status.intervalMs,
     lastCompletedAt: status.lastCompletedAt,
     lastCycleAgeSeconds,
+    lastIngestionAt: status.lastIngestionAt,
+    lastIngestionAgeSeconds,
+    lastIngestionProvider: status.lastIngestionProvider,
+    lastIngestionFetchedAt: status.lastIngestionFetchedAt,
+    lastIngestionMacroInserted: status.lastIngestionMacroInserted,
+    lastIngestionMacroUpdated: status.lastIngestionMacroUpdated,
+    lastIngestionMacroSkipped: status.lastIngestionMacroSkipped,
+    lastIngestionCbInserted: status.lastIngestionCbInserted,
+    lastIngestionCbUpdated: status.lastIngestionCbUpdated,
+    lastIngestionCbSkipped: status.lastIngestionCbSkipped,
+    lastIngestionError: status.lastIngestionError,
     stale,
     staleThresholdSeconds,
     lastDurationMs: status.lastDurationMs,
@@ -71,7 +90,43 @@ router.get("/signal-engine/runs", (req: Request, res: Response) => {
   res.json(rows);
 });
 
-router.post("/signal-engine/run-now", (req: Request, res: Response) => {
+router.get("/ingestion/runs", (req: Request, res: Response) => {
+  const limitValue = req.query.limit;
+  const parsedLimit = typeof limitValue === "string" ? Number.parseInt(limitValue, 10) : 5;
+  const rows = listRecentIngestionRuns(parsedLimit);
+  res.json(rows);
+});
+
+router.post("/ingestion/run-now", async (req: Request, res: Response) => {
+  const configuredKey = env.OPS_RUN_KEY.trim();
+  if (!configuredKey) {
+    return res.status(503).json({ error: "OPS_RUN_KEY is not configured" });
+  }
+
+  const providedKey = req.header("x-ops-run-key")?.trim() ?? "";
+  if (providedKey !== configuredKey) {
+    return res.status(401).json({ error: "Invalid operations key" });
+  }
+
+  const result = await runIngestionCycle();
+  if (!result.success) {
+    return res.status(500).json({
+      error: result.error ?? "Ingestion cycle failed",
+      result,
+      status: getSignalEngineStatus(),
+      runs: listRecentIngestionRuns(5),
+    });
+  }
+
+  return res.json({
+    message: "Ingestion cycle completed",
+    result,
+    status: getSignalEngineStatus(),
+    runs: listRecentIngestionRuns(5),
+  });
+});
+
+router.post("/signal-engine/run-now", async (req: Request, res: Response) => {
   const requestedAt = new Date().toISOString();
   const requestIp = req.ip;
   const configuredKey = env.OPS_RUN_KEY.trim();
@@ -100,7 +155,7 @@ router.post("/signal-engine/run-now", (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid operations key" });
   }
 
-  const result = runSignalEngineCycle();
+  const result = await runSignalEngineCycle();
   createOpsRunAudit({
     triggerSource: "MANUAL_API",
     requestedAt,

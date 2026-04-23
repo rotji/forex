@@ -83,6 +83,9 @@ export function runMigrations(): void {
       period TEXT,
       released_at TEXT NOT NULL,
       source TEXT,
+      source_provider TEXT,
+      source_id TEXT,
+      ingested_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -98,6 +101,9 @@ export function runMigrations(): void {
       actual_value TEXT,
       outcome_tone TEXT CHECK(outcome_tone IN ('DOVISH','NEUTRAL','HAWKISH')),
       source TEXT,
+      source_provider TEXT,
+      source_id TEXT,
+      ingested_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -142,8 +148,28 @@ export function runMigrations(): void {
       request_ip TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS ingestion_runs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      completed_at TEXT,
+      success INTEGER NOT NULL DEFAULT 0,
+      macro_inserted INTEGER NOT NULL DEFAULT 0,
+      macro_updated INTEGER NOT NULL DEFAULT 0,
+      macro_skipped INTEGER NOT NULL DEFAULT 0,
+      cb_inserted INTEGER NOT NULL DEFAULT 0,
+      cb_updated INTEGER NOT NULL DEFAULT 0,
+      cb_skipped INTEGER NOT NULL DEFAULT 0,
+      error_message TEXT,
+      fetched_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_ops_run_audit_requested_at
       ON ops_run_audit(requested_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_ingestion_runs_started_at
+      ON ingestion_runs(started_at DESC);
   `);
 
   const existingAlertColumns = db
@@ -166,6 +192,46 @@ export function runMigrations(): void {
   if (!columnSet.has("score_diff")) {
     db.exec("ALTER TABLE trade_alerts ADD COLUMN score_diff REAL");
   }
+
+  const macroColumns = db
+    .prepare("PRAGMA table_info(macro_indicators)")
+    .all() as Array<{ name: string }>;
+  const macroColumnSet = new Set(macroColumns.map((c) => c.name));
+
+  if (!macroColumnSet.has("source_provider")) {
+    db.exec("ALTER TABLE macro_indicators ADD COLUMN source_provider TEXT");
+  }
+  if (!macroColumnSet.has("source_id")) {
+    db.exec("ALTER TABLE macro_indicators ADD COLUMN source_id TEXT");
+  }
+  if (!macroColumnSet.has("ingested_at")) {
+    db.exec("ALTER TABLE macro_indicators ADD COLUMN ingested_at TEXT");
+  }
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_macro_source_unique
+      ON macro_indicators(source_provider, source_id)
+  `);
+
+  const cbColumns = db
+    .prepare("PRAGMA table_info(central_bank_events)")
+    .all() as Array<{ name: string }>;
+  const cbColumnSet = new Set(cbColumns.map((c) => c.name));
+
+  if (!cbColumnSet.has("source_provider")) {
+    db.exec("ALTER TABLE central_bank_events ADD COLUMN source_provider TEXT");
+  }
+  if (!cbColumnSet.has("source_id")) {
+    db.exec("ALTER TABLE central_bank_events ADD COLUMN source_id TEXT");
+  }
+  if (!cbColumnSet.has("ingested_at")) {
+    db.exec("ALTER TABLE central_bank_events ADD COLUMN ingested_at TEXT");
+  }
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_central_bank_source_unique
+      ON central_bank_events(source_provider, source_id)
+  `);
 
   console.log("Migrations ran successfully.");
 }

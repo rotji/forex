@@ -37,6 +37,38 @@
   gap: 0.75rem;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.fieldHint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.fieldStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sectionLabel {
+  margin: 1rem 0 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .input,
 .select,
 .textarea {
