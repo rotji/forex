@@ -53,12 +53,21 @@ interface PositioningRow {
   recorded_at: string;
 }
 
+export interface BiasBreakdown {
+  macro: number;
+  events: number;
+  centralBank: number;
+  riskSentiment: number;
+  positioning: number;
+}
+
 interface BiasSnapshot {
   currency: string;
   score: number;
   bias: BiasLabel;
   confidence: number;
   drivers: string;
+  breakdown: string;
   computedAt: string;
 }
 
@@ -223,7 +232,8 @@ function computeCurrencySnapshot(
   positioning: PositioningRow | undefined,
   computedAt: string
 ): BiasSnapshot {
-  const weighted: Array<{ contribution: number; label: string }> = [];
+  const macroWeighted: Array<{ contribution: number; label: string }> = [];
+  const eventWeighted: Array<{ contribution: number; label: string }> = [];
 
   for (const indicator of indicators) {
     const baseSurprise =
@@ -234,10 +244,8 @@ function computeCurrencySnapshot(
 
     const directional =
       indicator.signal_direction === "LOWER_IS_BULLISH" ? baseSurprise * -1 : baseSurprise;
-    const weight = IMPORTANCE_WEIGHTS[indicator.importance];
-    const contribution = directional * weight;
-
-    weighted.push({
+    const contribution = directional * IMPORTANCE_WEIGHTS[indicator.importance];
+    macroWeighted.push({
       contribution,
       label: `${indicator.indicator_name} (${contribution > 0 ? "+" : ""}${contribution.toFixed(2)})`,
     });
@@ -246,14 +254,19 @@ function computeCurrencySnapshot(
   for (const event of economicEvents) {
     const eventContribution = toEconomicEventContribution(event);
     if (!eventContribution) continue;
-    weighted.push(eventContribution);
+    eventWeighted.push(eventContribution);
   }
 
   const indicatorWeight = indicators.reduce((sum, item) => sum + IMPORTANCE_WEIGHTS[item.importance], 0);
   const eventWeight = economicEvents.reduce((sum, item) => sum + EVENT_IMPACT_WEIGHTS[item.impact], 0);
   const totalWeight = indicatorWeight + eventWeight;
-  const indicatorScoreRaw = weighted.reduce((sum, item) => sum + item.contribution, 0);
-  const indicatorScore = totalWeight > 0 ? indicatorScoreRaw / totalWeight : 0;
+
+  const macroRaw = macroWeighted.reduce((sum, x) => sum + x.contribution, 0);
+  const eventsRaw = eventWeighted.reduce((sum, x) => sum + x.contribution, 0);
+  const macroScore = totalWeight > 0 ? macroRaw / totalWeight : 0;
+  const eventsScore = totalWeight > 0 ? eventsRaw / totalWeight : 0;
+  const indicatorScore = macroScore + eventsScore;
+
   const toneAdjustment = getToneAdjustment(latestEvent?.outcome_tone ?? null);
   const riskAdjustment = getRiskSentimentContribution(currency, riskSentiment);
   const positioningAdjustment = getPositioningContribution(positioning);
@@ -268,7 +281,8 @@ function computeCurrencySnapshot(
     0.95
   );
 
-  const topDrivers = weighted
+  const allWeighted = [...macroWeighted, ...eventWeighted];
+  const topDrivers = allWeighted
     .sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution))
     .slice(0, 3)
     .map((x) => x.label);
@@ -283,12 +297,21 @@ function computeCurrencySnapshot(
     topDrivers.push(positioningAdjustment.label);
   }
 
+  const breakdown: BiasBreakdown = {
+    macro: parseFloat(macroScore.toFixed(4)),
+    events: parseFloat(eventsScore.toFixed(4)),
+    centralBank: parseFloat(toneAdjustment.toFixed(4)),
+    riskSentiment: parseFloat((riskAdjustment?.contribution ?? 0).toFixed(4)),
+    positioning: parseFloat((positioningAdjustment?.contribution ?? 0).toFixed(4)),
+  };
+
   return {
     currency,
     score,
     bias: toBiasLabel(score),
     confidence,
     drivers: topDrivers.length ? topDrivers.join("; ") : "Insufficient macro signals",
+    breakdown: JSON.stringify(breakdown),
     computedAt,
   };
 }
@@ -415,8 +438,8 @@ export function recomputeCurrencyBiases() {
   console.log(`[currency-bias] recomputing biases: ${indicatorRows.length} macro indicators, ${economicRows.length} economic events, ${bankRows.length} central bank events, ${riskSentiment ? 1 : 0} risk sentiment snapshots, ${positioningRows.length} positioning snapshots available`);
 
   const insertSnapshot = db.prepare(
-    `INSERT INTO currency_bias_snapshots (currency, score, bias, confidence, drivers, computed_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO currency_bias_snapshots (currency, score, bias, confidence, drivers, breakdown, computed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   );
 
   const snapshots: BiasSnapshot[] = [];
@@ -436,6 +459,7 @@ export function recomputeCurrencyBiases() {
         snapshot.bias,
         snapshot.confidence,
         snapshot.drivers,
+        snapshot.breakdown,
         snapshot.computedAt
       );
       

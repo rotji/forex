@@ -177,6 +177,7 @@ export interface CurrencyBiasSnapshot {
   bias: BiasLabel;
   confidence: number;
   drivers: string | null;
+  breakdown: string | null;
   computed_at: string;
 }
 
@@ -250,12 +251,21 @@ export interface UpdateRiskSentimentInput {
   recorded_at?: string;
 }
 
+export interface BiasBreakdown {
+  macro: number;
+  events: number;
+  centralBank: number;
+  riskSentiment: number;
+  positioning: number;
+}
+
 export interface RecomputeBiasResponseRow {
   currency: string;
   score: number;
   bias: BiasLabel;
   confidence: number;
   drivers: string;
+  breakdown: string;
   computedAt: string;
 }
 

@@ -140,6 +140,7 @@ export function runMigrations(): void {
       bias TEXT NOT NULL CHECK(bias IN ('BULLISH','NEUTRAL','BEARISH')),
       confidence REAL NOT NULL,
       drivers TEXT,
+      breakdown TEXT,
       computed_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -264,6 +265,15 @@ export function runMigrations(): void {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_central_bank_source_unique
       ON central_bank_events(source_provider, source_id)
   `);
+
+  const biasColumns = db
+    .prepare("PRAGMA table_info(currency_bias_snapshots)")
+    .all() as Array<{ name: string }>;
+  const biasColumnSet = new Set(biasColumns.map((c) => c.name));
+
+  if (!biasColumnSet.has("breakdown")) {
+    db.exec("ALTER TABLE currency_bias_snapshots ADD COLUMN breakdown TEXT");
+  }
 
   console.log("Migrations ran successfully.");
 }
