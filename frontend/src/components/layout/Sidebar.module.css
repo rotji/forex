@@ -32,6 +32,15 @@
   gap: 0.35rem;
 }
 
+.sectionLabel {
+  padding: 0.6rem 0.9rem 0.1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .navLink {
   display: flex;
   align-items: center;
@@ -58,6 +67,82 @@
   box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.1);
 }
 
+.groupWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.groupToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.8rem 0.95rem;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.groupToggle:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+  transform: translateX(2px);
+}
+
+.groupToggleActive {
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.1);
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.groupArrow {
+  display: inline-block;
+  transition: transform 0.18s ease;
+}
+
+.groupArrowOpen {
+  transform: rotate(90deg);
+}
+
+.groupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 0.8rem;
+}
+
+.childLink {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.88rem;
+  border-radius: 12px;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.childLink:hover {
+  background: var(--surface-muted);
+  color: var(--text);
+  transform: translateX(2px);
+}
+
 @media (max-width: 900px) {
   .sidebar {
     width: 100%;
@@ -76,6 +161,22 @@
   }
 
   .navLink {
+    white-space: nowrap;
+  }
+
+  .groupWrap {
+    min-width: 220px;
+  }
+
+  .sectionLabel {
+    display: none;
+  }
+
+  .groupItems {
+    padding-left: 0;
+  }
+
+  .childLink {
     white-space: nowrap;
   }
 }

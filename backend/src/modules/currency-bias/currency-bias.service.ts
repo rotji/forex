@@ -32,6 +32,27 @@ interface EconomicEventRow {
   scheduled_at: string;
 }
 
+type ThreeWayBias = "BULLISH" | "NEUTRAL" | "BEARISH";
+type RiskRegime = "RISK_ON" | "NEUTRAL" | "RISK_OFF";
+
+interface RiskSentimentRow {
+  regime: RiskRegime;
+  vix_level: number | null;
+  dxy_bias: ThreeWayBias;
+  yields_bias: ThreeWayBias;
+  equities_tone: ThreeWayBias;
+  commodities_tone: ThreeWayBias;
+  recorded_at: string;
+}
+
+interface PositioningRow {
+  currency: string;
+  bias: BiasLabel;
+  conviction: Importance;
+  net_position_ratio: number | null;
+  recorded_at: string;
+}
+
 interface BiasSnapshot {
   currency: string;
   score: number;
@@ -46,6 +67,8 @@ export interface RecomputeCurrencyBiasesResult {
   macroIndicatorsCount: number;
   economicEventsCount: number;
   centralBankEventsCount: number;
+  riskSentimentCount: number;
+  positioningCount: number;
 }
 
 const IMPORTANCE_WEIGHTS: Record<Importance, number> = {
@@ -58,6 +81,14 @@ const EVENT_IMPACT_WEIGHTS: Record<Importance, number> = {
   LOW: 0.5,
   MEDIUM: 0.9,
   HIGH: 1.3,
+};
+
+const RISK_ON_BENEFICIARIES = new Set(["AUD", "NZD", "CAD", "NOK", "SEK", "ZAR", "MXN", "BRL", "GBP", "EUR"]);
+const RISK_OFF_BENEFICIARIES = new Set(["USD", "JPY", "CHF", "SGD", "HKD", "DKK"]);
+const POSITIONING_WEIGHTS: Record<Importance, number> = {
+  LOW: 0.05,
+  MEDIUM: 0.1,
+  HIGH: 0.16,
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -116,11 +147,80 @@ function toEconomicEventContribution(event: EconomicEventRow): { contribution: n
   };
 }
 
+function directionalBiasValue(value: ThreeWayBias): number {
+  if (value === "BULLISH") return 1;
+  if (value === "BEARISH") return -1;
+  return 0;
+}
+
+function getRiskSentimentContribution(currency: string, riskSentiment: RiskSentimentRow | undefined) {
+  if (!riskSentiment) return null;
+
+  let contribution = 0;
+  const labels: string[] = [];
+
+  if (riskSentiment.regime === "RISK_ON") {
+    if (RISK_ON_BENEFICIARIES.has(currency)) contribution += 0.14;
+    if (RISK_OFF_BENEFICIARIES.has(currency)) contribution -= 0.08;
+    labels.push("Risk regime: RISK_ON");
+  } else if (riskSentiment.regime === "RISK_OFF") {
+    if (RISK_OFF_BENEFICIARIES.has(currency)) contribution += 0.14;
+    if (RISK_ON_BENEFICIARIES.has(currency)) contribution -= 0.08;
+    labels.push("Risk regime: RISK_OFF");
+  }
+
+  if (currency === "USD") {
+    contribution += directionalBiasValue(riskSentiment.dxy_bias) * 0.08;
+    contribution += directionalBiasValue(riskSentiment.yields_bias) * 0.05;
+    if (riskSentiment.dxy_bias !== "NEUTRAL") labels.push(`DXY: ${riskSentiment.dxy_bias}`);
+    if (riskSentiment.yields_bias !== "NEUTRAL") labels.push(`US yields: ${riskSentiment.yields_bias}`);
+  }
+
+  if (["AUD", "NZD", "CAD", "NOK", "ZAR", "MXN", "BRL"].includes(currency)) {
+    contribution += directionalBiasValue(riskSentiment.commodities_tone) * 0.05;
+    if (riskSentiment.commodities_tone !== "NEUTRAL") labels.push(`Commodities: ${riskSentiment.commodities_tone}`);
+  }
+
+  if (["USD", "JPY", "CHF", "EUR", "GBP", "AUD", "NZD", "CAD"].includes(currency)) {
+    contribution += directionalBiasValue(riskSentiment.equities_tone) * (RISK_ON_BENEFICIARIES.has(currency) ? 0.04 : -0.03);
+    if (riskSentiment.equities_tone !== "NEUTRAL") labels.push(`Equities: ${riskSentiment.equities_tone}`);
+  }
+
+  if (contribution === 0 && labels.length === 0) return null;
+
+  return {
+    contribution: clamp(contribution, -0.3, 0.3),
+    labels,
+  };
+}
+
+function getPositioningContribution(positioning: PositioningRow | undefined) {
+  if (!positioning) return null;
+
+  const directional = positioning.bias === "BULLISH" ? 1 : positioning.bias === "BEARISH" ? -1 : 0;
+  if (directional === 0) {
+    return {
+      contribution: 0,
+      label: `Positioning: ${positioning.bias}`,
+    };
+  }
+
+  const ratioFactor = positioning.net_position_ratio == null ? 1 : clamp(Math.abs(positioning.net_position_ratio), 0.4, 1.4);
+  const contribution = clamp(directional * POSITIONING_WEIGHTS[positioning.conviction] * ratioFactor, -0.25, 0.25);
+
+  return {
+    contribution,
+    label: `Positioning: ${positioning.bias} ${positioning.conviction}`,
+  };
+}
+
 function computeCurrencySnapshot(
   currency: string,
   indicators: MacroIndicatorRow[],
   economicEvents: EconomicEventRow[],
   latestEvent: CentralBankEventRow | undefined,
+  riskSentiment: RiskSentimentRow | undefined,
+  positioning: PositioningRow | undefined,
   computedAt: string
 ): BiasSnapshot {
   const weighted: Array<{ contribution: number; label: string }> = [];
@@ -155,9 +255,15 @@ function computeCurrencySnapshot(
   const indicatorScoreRaw = weighted.reduce((sum, item) => sum + item.contribution, 0);
   const indicatorScore = totalWeight > 0 ? indicatorScoreRaw / totalWeight : 0;
   const toneAdjustment = getToneAdjustment(latestEvent?.outcome_tone ?? null);
-  const score = clamp(indicatorScore + toneAdjustment, -1, 1);
+  const riskAdjustment = getRiskSentimentContribution(currency, riskSentiment);
+  const positioningAdjustment = getPositioningContribution(positioning);
+  const score = clamp(
+    indicatorScore + toneAdjustment + (riskAdjustment?.contribution ?? 0) + (positioningAdjustment?.contribution ?? 0),
+    -1,
+    1
+  );
   const confidence = clamp(
-    0.35 + Math.min(0.35, Math.abs(score) * 0.35) + Math.min(0.25, (indicators.length + economicEvents.length) * 0.04),
+    0.35 + Math.min(0.35, Math.abs(score) * 0.35) + Math.min(0.25, (indicators.length + economicEvents.length + (riskSentiment ? 1 : 0) + (positioning ? 1 : 0)) * 0.04),
     0.35,
     0.95
   );
@@ -169,6 +275,12 @@ function computeCurrencySnapshot(
 
   if (latestEvent?.outcome_tone) {
     topDrivers.push(`Central bank tone: ${latestEvent.outcome_tone}`);
+  }
+  if (riskAdjustment) {
+    topDrivers.push(...riskAdjustment.labels.slice(0, 2));
+  }
+  if (positioningAdjustment) {
+    topDrivers.push(positioningAdjustment.label);
   }
 
   return {
@@ -277,7 +389,30 @@ export function recomputeCurrencyBiases() {
     )
     .all() as EconomicEventRow[];
 
-  console.log(`[currency-bias] recomputing biases: ${indicatorRows.length} macro indicators, ${economicRows.length} economic events, ${bankRows.length} central bank events available`);
+  const riskSentiment = db
+    .prepare(
+      `SELECT regime, vix_level, dxy_bias, yields_bias, equities_tone, commodities_tone, recorded_at
+       FROM risk_sentiment_snapshots
+       ORDER BY recorded_at DESC
+       LIMIT 1`
+    )
+    .get() as RiskSentimentRow | undefined;
+
+  const positioningRows = db
+    .prepare(
+      `SELECT p.currency, p.bias, p.conviction, p.net_position_ratio, p.recorded_at
+       FROM positioning_snapshots p
+       INNER JOIN (
+         SELECT currency, MAX(recorded_at) AS latest
+         FROM positioning_snapshots
+         GROUP BY currency
+       ) latest_rows
+       ON latest_rows.currency = p.currency AND latest_rows.latest = p.recorded_at`
+    )
+    .all() as PositioningRow[];
+  const positioningMap = new Map(positioningRows.map((row) => [row.currency, row]));
+
+  console.log(`[currency-bias] recomputing biases: ${indicatorRows.length} macro indicators, ${economicRows.length} economic events, ${bankRows.length} central bank events, ${riskSentiment ? 1 : 0} risk sentiment snapshots, ${positioningRows.length} positioning snapshots available`);
 
   const insertSnapshot = db.prepare(
     `INSERT INTO currency_bias_snapshots (currency, score, bias, confidence, drivers, computed_at)
@@ -292,8 +427,9 @@ export function recomputeCurrencyBiases() {
       const indicators = indicatorRows.filter((row) => row.currency === currency).slice(0, 8);
       const events = economicRows.filter((row) => row.currency === currency).slice(0, 6);
       const latestEvent = bankRows.find((row) => row.currency === currency);
+      const positioning = positioningMap.get(currency);
 
-      const snapshot = computeCurrencySnapshot(currency, indicators, events, latestEvent, computedAt);
+      const snapshot = computeCurrencySnapshot(currency, indicators, events, latestEvent, riskSentiment, positioning, computedAt);
       insertSnapshot.run(
         snapshot.currency,
         snapshot.score,
@@ -306,7 +442,9 @@ export function recomputeCurrencyBiases() {
       const indicatorNames = indicators.map((i) => i.indicator_name).join(", ") || "(none)";
       const eventCount = events.length;
       const eventTone = latestEvent?.outcome_tone ? ` + event:${latestEvent.outcome_tone}` : "";
-      console.log(`  [${currency}] ${snapshot.bias} (score ${snapshot.score.toFixed(2)}, conf ${(snapshot.confidence * 100).toFixed(0)}%) | indicators: ${indicatorNames} | events: ${eventCount}${eventTone}`);
+      const riskLabel = riskSentiment ? ` | risk: ${riskSentiment.regime}` : "";
+      const positioningLabel = positioning ? ` | positioning: ${positioning.bias}/${positioning.conviction}` : "";
+      console.log(`  [${currency}] ${snapshot.bias} (score ${snapshot.score.toFixed(2)}, conf ${(snapshot.confidence * 100).toFixed(0)}%) | indicators: ${indicatorNames} | events: ${eventCount}${eventTone}${riskLabel}${positioningLabel}`);
       
       snapshots.push(snapshot);
     }
@@ -318,5 +456,7 @@ export function recomputeCurrencyBiases() {
     macroIndicatorsCount: indicatorRows.length,
     economicEventsCount: economicRows.length,
     centralBankEventsCount: bankRows.length,
+    riskSentimentCount: riskSentiment ? 1 : 0,
+    positioningCount: positioningRows.length,
   };
 }

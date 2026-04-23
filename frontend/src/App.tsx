@@ -8,6 +8,8 @@ import { SignalsPage } from "./pages/SignalsPage";
 import { SetupsPage } from "./pages/SetupsPage";
 import { MacroIndicatorsPage } from "./pages/MacroIndicatorsPage";
 import { CentralBankEventsPage } from "./pages/CentralBankEventsPage";
+import { RiskSentimentPage } from "./pages/RiskSentimentPage";
+import { PositioningPage } from "./pages/PositioningPage";
 import { CurrencyBiasPage } from "./pages/CurrencyBiasPage";
 import { AlertsPage } from "./pages/AlertsPage";
 
@@ -24,6 +26,8 @@ export default function App() {
           <Route path="setups" element={<SetupsPage />} />
           <Route path="macro-indicators" element={<MacroIndicatorsPage />} />
           <Route path="central-bank-events" element={<CentralBankEventsPage />} />
+          <Route path="risk-sentiment" element={<RiskSentimentPage />} />
+          <Route path="positioning" element={<PositioningPage />} />
           <Route path="currency-bias" element={<CurrencyBiasPage />} />
           <Route path="alerts" element={<AlertsPage />} />
         </Route>

@@ -4,6 +4,8 @@ export type TradeStatus = "PENDING" | "ACTIVE" | "HIT_TP" | "HIT_SL" | "CANCELLE
 export type Timeframe = "1m" | "5m" | "15m" | "1h" | "4h" | "1d" | "1w";
 export type CentralBankTone = "DOVISH" | "NEUTRAL" | "HAWKISH";
 export type BiasLabel = "BULLISH" | "NEUTRAL" | "BEARISH";
+export type RiskRegime = "RISK_ON" | "NEUTRAL" | "RISK_OFF";
+export type PositioningConviction = "LOW" | "MEDIUM" | "HIGH";
 
 export interface Currency {
   id: number;
@@ -178,6 +180,76 @@ export interface CurrencyBiasSnapshot {
   computed_at: string;
 }
 
+export interface RiskSentimentSnapshot {
+  id: number;
+  regime: RiskRegime;
+  vix_level: number | null;
+  dxy_bias: BiasLabel;
+  yields_bias: BiasLabel;
+  equities_tone: BiasLabel;
+  commodities_tone: BiasLabel;
+  notes: string | null;
+  source: string | null;
+  recorded_at: string;
+  created_at: string;
+}
+
+export interface PositioningSnapshot {
+  id: number;
+  currency: string;
+  bias: BiasLabel;
+  conviction: PositioningConviction;
+  net_position_ratio: number | null;
+  source: string | null;
+  notes: string | null;
+  recorded_at: string;
+  created_at: string;
+}
+
+export interface CreatePositioningInput {
+  currency: string;
+  bias: BiasLabel;
+  conviction: PositioningConviction;
+  net_position_ratio?: number | null;
+  source?: string;
+  notes?: string;
+  recorded_at: string;
+}
+
+export interface UpdatePositioningInput {
+  currency?: string;
+  bias?: BiasLabel;
+  conviction?: PositioningConviction;
+  net_position_ratio?: number | null;
+  source?: string | null;
+  notes?: string | null;
+  recorded_at?: string;
+}
+
+export interface CreateRiskSentimentInput {
+  regime: RiskRegime;
+  vix_level?: number | null;
+  dxy_bias: BiasLabel;
+  yields_bias: BiasLabel;
+  equities_tone: BiasLabel;
+  commodities_tone: BiasLabel;
+  notes?: string;
+  source?: string;
+  recorded_at: string;
+}
+
+export interface UpdateRiskSentimentInput {
+  regime?: RiskRegime;
+  vix_level?: number | null;
+  dxy_bias?: BiasLabel;
+  yields_bias?: BiasLabel;
+  equities_tone?: BiasLabel;
+  commodities_tone?: BiasLabel;
+  notes?: string | null;
+  source?: string | null;
+  recorded_at?: string;
+}
+
 export interface RecomputeBiasResponseRow {
   currency: string;
   score: number;
@@ -192,6 +264,8 @@ export interface RecomputeBiasResponse {
   macroIndicatorsCount: number;
   economicEventsCount: number;
   centralBankEventsCount: number;
+  riskSentimentCount: number;
+  positioningCount: number;
   generatedAlertsCount: number;
   computedAt: string;
   rows: RecomputeBiasResponseRow[];

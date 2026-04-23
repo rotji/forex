@@ -107,6 +107,32 @@ export function runMigrations(): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS risk_sentiment_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      regime TEXT NOT NULL CHECK(regime IN ('RISK_ON','NEUTRAL','RISK_OFF')),
+      vix_level REAL,
+      dxy_bias TEXT NOT NULL DEFAULT 'NEUTRAL' CHECK(dxy_bias IN ('BULLISH','NEUTRAL','BEARISH')),
+      yields_bias TEXT NOT NULL DEFAULT 'NEUTRAL' CHECK(yields_bias IN ('BULLISH','NEUTRAL','BEARISH')),
+      equities_tone TEXT NOT NULL DEFAULT 'NEUTRAL' CHECK(equities_tone IN ('BULLISH','NEUTRAL','BEARISH')),
+      commodities_tone TEXT NOT NULL DEFAULT 'NEUTRAL' CHECK(commodities_tone IN ('BULLISH','NEUTRAL','BEARISH')),
+      notes TEXT,
+      source TEXT,
+      recorded_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS positioning_snapshots (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      currency TEXT NOT NULL,
+      bias TEXT NOT NULL CHECK(bias IN ('BULLISH','NEUTRAL','BEARISH')),
+      conviction TEXT NOT NULL CHECK(conviction IN ('LOW','MEDIUM','HIGH')),
+      net_position_ratio REAL,
+      source TEXT,
+      notes TEXT,
+      recorded_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS currency_bias_snapshots (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       currency TEXT NOT NULL,
@@ -170,6 +196,12 @@ export function runMigrations(): void {
 
     CREATE INDEX IF NOT EXISTS idx_ingestion_runs_started_at
       ON ingestion_runs(started_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_risk_sentiment_recorded_at
+      ON risk_sentiment_snapshots(recorded_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_positioning_currency_recorded_at
+      ON positioning_snapshots(currency, recorded_at DESC);
   `);
 
   const existingAlertColumns = db

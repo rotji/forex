@@ -23,6 +23,8 @@ router.post("/recompute", (_req: Request, res: Response) => {
     macroIndicatorsCount: result.macroIndicatorsCount,
     economicEventsCount: result.economicEventsCount,
     centralBankEventsCount: result.centralBankEventsCount,
+    riskSentimentCount: result.riskSentimentCount,
+    positioningCount: result.positioningCount,
     generatedAlertsCount: alerts.length,
     computedAt: new Date().toISOString(),
     rows: result.rows,
