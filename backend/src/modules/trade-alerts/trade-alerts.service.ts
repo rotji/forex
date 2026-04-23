@@ -47,7 +47,11 @@ export function getTradeAlerts(status: "ACTIVE" | "ACKNOWLEDGED" | "EXPIRED" | "
 }
 
 function buildAlertFromPair(pair: string, biasMap: Map<string, LatestBiasRow>): GeneratedAlert | null {
-  const [base, quote] = pair.split("/");
+  const parts = pair.split("/");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+
+  const base = parts[0];
+  const quote = parts[1];
   const baseBias = biasMap.get(base);
   const quoteBias = biasMap.get(quote);
   if (!baseBias || !quoteBias) return null;

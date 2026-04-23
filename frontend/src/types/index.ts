@@ -271,6 +271,26 @@ export interface RecomputeBiasResponse {
   rows: RecomputeBiasResponseRow[];
 }
 
+export type CsvImportDataset =
+  | "macro-indicators"
+  | "economic-events"
+  | "central-bank-events"
+  | "risk-sentiment"
+  | "positioning";
+
+export interface CsvImportErrorRow {
+  row: number;
+  message: string;
+}
+
+export interface CsvImportResponse {
+  dataset: CsvImportDataset;
+  totalRows: number;
+  inserted: number;
+  failed: number;
+  errors: CsvImportErrorRow[];
+}
+
 export interface TradeAlert {
   id: number;
   pair_symbol: string;

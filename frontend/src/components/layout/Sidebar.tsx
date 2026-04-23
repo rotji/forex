@@ -14,6 +14,7 @@ const marketInputLinks = [
   { to: "/central-bank-events", label: "Central Bank Tone", icon: "🏦" },
   { to: "/risk-sentiment", label: "Risk Sentiment", icon: "🌡️" },
   { to: "/positioning", label: "Positioning", icon: "🧭" },
+  { to: "/data-import", label: "Data Import", icon: "📥" },
 ];
 
 const engineLinks = [

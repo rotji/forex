@@ -15,6 +15,7 @@ import macroIndicatorsRouter from "./modules/macro-indicators/macro-indicators.r
 import centralBankEventsRouter from "./modules/central-bank-events/central-bank-events.router";
 import riskSentimentRouter from "./modules/risk-sentiment/risk-sentiment.router";
 import positioningRouter from "./modules/positioning/positioning.router";
+import dataImportRouter from "./modules/data-import/data-import.router";
 import currencyBiasRouter from "./modules/currency-bias/currency-bias.router";
 import tradeAlertsRouter from "./modules/trade-alerts/trade-alerts.router";
 import opsRouter from "./modules/ops/ops.router";
@@ -48,6 +49,7 @@ app.use("/api/macro-indicators", macroIndicatorsRouter);
 app.use("/api/central-bank-events", centralBankEventsRouter);
 app.use("/api/risk-sentiment", riskSentimentRouter);
 app.use("/api/positioning", positioningRouter);
+app.use("/api/data-import", dataImportRouter);
 app.use("/api/currency-bias", currencyBiasRouter);
 app.use("/api/alerts", tradeAlertsRouter);
 app.use("/api/ops", opsRouter);

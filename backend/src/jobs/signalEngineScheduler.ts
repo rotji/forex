@@ -88,7 +88,7 @@ export async function runSignalEngineCycle(): Promise<SignalEngineCycleResult> {
       ingestionError: ingestionResult.error,
       expiredCount: expired,
       cleanedCount: cleaned,
-      biasCount: biasRows.length,
+      biasCount: biasResult.rows.length,
       generatedAlertsCount: alerts.length,
       error: null,
     };

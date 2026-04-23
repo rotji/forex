@@ -351,11 +351,11 @@ export function getCurrencyBiasHistoryMap(limitPerCurrency = 8) {
       computed_at: string;
     }>;
 
-  const map: Record<string, typeof rows> = {};
+  const map: Record<string, Array<(typeof rows)[number]>> = {};
   for (const row of rows) {
-    if (!map[row.currency]) map[row.currency] = [];
-    if (map[row.currency].length >= limitPerCurrency) continue;
-    map[row.currency].push(row);
+    const bucket = map[row.currency] ?? (map[row.currency] = []);
+    if (bucket.length >= limitPerCurrency) continue;
+    bucket.push(row);
   }
   return map;
 }

@@ -10,6 +10,7 @@ import { MacroIndicatorsPage } from "./pages/MacroIndicatorsPage";
 import { CentralBankEventsPage } from "./pages/CentralBankEventsPage";
 import { RiskSentimentPage } from "./pages/RiskSentimentPage";
 import { PositioningPage } from "./pages/PositioningPage";
+import { DataImportPage } from "./pages/DataImportPage";
 import { CurrencyBiasPage } from "./pages/CurrencyBiasPage";
 import { AlertsPage } from "./pages/AlertsPage";
 
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="central-bank-events" element={<CentralBankEventsPage />} />
           <Route path="risk-sentiment" element={<RiskSentimentPage />} />
           <Route path="positioning" element={<PositioningPage />} />
+          <Route path="data-import" element={<DataImportPage />} />
           <Route path="currency-bias" element={<CurrencyBiasPage />} />
           <Route path="alerts" element={<AlertsPage />} />
         </Route>

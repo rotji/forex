@@ -128,7 +128,7 @@ router.post("/ingestion/run-now", async (req: Request, res: Response) => {
 
 router.post("/signal-engine/run-now", async (req: Request, res: Response) => {
   const requestedAt = new Date().toISOString();
-  const requestIp = req.ip;
+  const requestIp = req.ip ?? null;
   const configuredKey = env.OPS_RUN_KEY.trim();
   if (!configuredKey) {
     createOpsRunAudit({
