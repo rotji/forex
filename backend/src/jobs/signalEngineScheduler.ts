@@ -44,7 +44,7 @@ export async function runSignalEngineCycle(): Promise<SignalEngineCycleResult> {
     const ingestionAt = new Date().toISOString();
     const expired = expireStaleTradeAlerts();
     const cleaned = cleanupExpiredTradeAlerts(env.ALERT_ARCHIVE_RETENTION_DAYS);
-    const biasRows = recomputeCurrencyBiases();
+    const biasResult = recomputeCurrencyBiases();
     const alerts = generateTradeAlertsFromBiases();
     const completedAt = new Date();
     const completedAtIso = completedAt.toISOString();
@@ -64,13 +64,13 @@ export async function runSignalEngineCycle(): Promise<SignalEngineCycleResult> {
       ingestionError: ingestionResult.error,
       expiredCount: expired,
       cleanedCount: cleaned,
-      biasCount: biasRows.length,
+      biasCount: biasResult.rows.length,
       generatedAlertsCount: alerts.length,
     });
     console.log(`\n[signal-engine] cycle summary (${durationMs}ms)`);
     console.log(`  ingestion: provider=${ingestionResult.provider} inserted=${ingestionResult.macroInserted + ingestionResult.cbInserted} updated=${ingestionResult.macroUpdated + ingestionResult.cbUpdated} skipped=${ingestionResult.macroSkipped + ingestionResult.cbSkipped} err=${ingestionResult.error ?? "none"}`);
     console.log(`  alerts: expired ${expired} stale, cleaned ${cleaned} archived, generated ${alerts.length} new`);
-    console.log(`  biases: recomputed ${biasRows.length} currencies\n`);
+    console.log(`  biases: recomputed ${biasResult.rows.length} currencies\n`);
     return {
       success: true,
       startedAt: startedAtIso,

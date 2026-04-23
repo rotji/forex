@@ -189,6 +189,9 @@ export interface RecomputeBiasResponseRow {
 
 export interface RecomputeBiasResponse {
   count: number;
+  macroIndicatorsCount: number;
+  economicEventsCount: number;
+  centralBankEventsCount: number;
   generatedAlertsCount: number;
   computedAt: string;
   rows: RecomputeBiasResponseRow[];

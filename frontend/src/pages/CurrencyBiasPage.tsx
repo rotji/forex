@@ -32,7 +32,7 @@ export function CurrencyBiasPage() {
     try {
       const result = await currencyBiasService.recompute();
       setActionMessage(
-        `Recomputed ${result.count} currency biases and generated ${result.generatedAlertsCount} alerts.`
+        `Recomputed ${result.count} currency snapshots using ${result.macroIndicatorsCount} macro indicators, ${result.economicEventsCount} economic events, and ${result.centralBankEventsCount} central bank events; generated ${result.generatedAlertsCount} alerts.`
       );
       refetch();
     } catch (err: unknown) {

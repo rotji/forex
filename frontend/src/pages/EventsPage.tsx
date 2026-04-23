@@ -22,6 +22,7 @@ export function EventsPage() {
   const [currency, setCurrency] = useState("USD");
   const [impact, setImpact] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [actualValue, setActualValue] = useState("");
   const [forecastValue, setForecastValue] = useState("");
   const [previousValue, setPreviousValue] = useState("");
   const [source, setSource] = useState("Manual UI");
@@ -34,6 +35,7 @@ export function EventsPage() {
     setCurrency("USD");
     setImpact("MEDIUM");
     setScheduledAt("");
+    setActualValue("");
     setForecastValue("");
     setPreviousValue("");
     setSource("Manual UI");
@@ -50,6 +52,7 @@ export function EventsPage() {
     const dt = new Date(event.scheduled_at);
     const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     setScheduledAt(local);
+    setActualValue(event.actual_value ?? "");
     setForecastValue(event.forecast_value ?? "");
     setPreviousValue(event.previous_value ?? "");
     setSource(event.source ?? "");
@@ -109,6 +112,7 @@ export function EventsPage() {
           currency: currency.toUpperCase(),
           impact,
           scheduledAt: new Date(scheduledAt).toISOString(),
+          actualValue: actualValue.trim() || null,
           forecastValue: forecastValue.trim() || null,
           previousValue: previousValue.trim() || null,
           source: source.trim() || null,
@@ -121,12 +125,14 @@ export function EventsPage() {
           currency: currency.toUpperCase(),
           impact,
           scheduledAt: new Date(scheduledAt).toISOString(),
+          actualValue: actualValue.trim() || undefined,
           forecastValue: forecastValue.trim() || undefined,
           previousValue: previousValue.trim() || undefined,
           source: source.trim() || undefined,
         });
         setTitle("");
         setScheduledAt("");
+        setActualValue("");
         setForecastValue("");
         setPreviousValue("");
         setSubmitSuccess("Event created successfully.");
@@ -163,6 +169,7 @@ export function EventsPage() {
             <option value="HIGH">HIGH</option>
           </select>
           <input className={styles.input} type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
+          <input className={styles.input} placeholder="Actual value" value={actualValue} onChange={(e) => setActualValue(e.target.value)} />
           <input className={styles.input} placeholder="Forecast value" value={forecastValue} onChange={(e) => setForecastValue(e.target.value)} />
           <input className={styles.input} placeholder="Previous value" value={previousValue} onChange={(e) => setPreviousValue(e.target.value)} />
           <input className={styles.input} placeholder="Source" value={source} onChange={(e) => setSource(e.target.value)} />
@@ -221,6 +228,7 @@ export function EventsPage() {
               <th>Currency</th>
               <th>Impact</th>
               <th>Scheduled</th>
+              <th>Actual</th>
               <th>Forecast</th>
               <th>Previous</th>
               <th>Actions</th>
@@ -237,6 +245,7 @@ export function EventsPage() {
                   </span>
                 </td>
                 <td>{new Date(e.scheduled_at).toLocaleString()}</td>
+                <td>{e.actual_value ?? "-"}</td>
                 <td>{e.forecast_value ?? "-"}</td>
                 <td>{e.previous_value ?? "-"}</td>
                 <td className={styles.rowActions}>

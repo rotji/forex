@@ -16,13 +16,16 @@ router.get("/", (_req: Request, res: Response) => {
 });
 
 router.post("/recompute", (_req: Request, res: Response) => {
-  const rows = recomputeCurrencyBiases();
+  const result = recomputeCurrencyBiases();
   const alerts = generateTradeAlertsFromBiases();
   res.status(201).json({
-    count: rows.length,
+    count: result.rows.length,
+    macroIndicatorsCount: result.macroIndicatorsCount,
+    economicEventsCount: result.economicEventsCount,
+    centralBankEventsCount: result.centralBankEventsCount,
     generatedAlertsCount: alerts.length,
     computedAt: new Date().toISOString(),
-    rows,
+    rows: result.rows,
   });
 });
 

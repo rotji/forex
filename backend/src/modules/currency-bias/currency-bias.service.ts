@@ -22,6 +22,16 @@ interface CentralBankEventRow {
   scheduled_at: string;
 }
 
+interface EconomicEventRow {
+  title: string;
+  currency: string;
+  impact: Importance;
+  actual_value: string | null;
+  forecast_value: string | null;
+  previous_value: string | null;
+  scheduled_at: string;
+}
+
 interface BiasSnapshot {
   currency: string;
   score: number;
@@ -31,10 +41,23 @@ interface BiasSnapshot {
   computedAt: string;
 }
 
+export interface RecomputeCurrencyBiasesResult {
+  rows: BiasSnapshot[];
+  macroIndicatorsCount: number;
+  economicEventsCount: number;
+  centralBankEventsCount: number;
+}
+
 const IMPORTANCE_WEIGHTS: Record<Importance, number> = {
   LOW: 0.6,
   MEDIUM: 1,
   HIGH: 1.6,
+};
+
+const EVENT_IMPACT_WEIGHTS: Record<Importance, number> = {
+  LOW: 0.5,
+  MEDIUM: 0.9,
+  HIGH: 1.3,
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -59,9 +82,44 @@ function getToneAdjustment(tone: CentralBankEventRow["outcome_tone"]): number {
   return 0;
 }
 
+function parseNumeric(value: string | null): number | null {
+  if (!value) return null;
+  const normalized = value.replace(/,/g, "").trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function inferEventSignalDirection(title: string): SignalDirection {
+  const t = title.toLowerCase();
+  if (t.includes("unemployment") || t.includes("jobless")) {
+    return "LOWER_IS_BULLISH";
+  }
+  return "HIGHER_IS_BULLISH";
+}
+
+function toEconomicEventContribution(event: EconomicEventRow): { contribution: number; label: string } | null {
+  const actual = parseNumeric(event.actual_value);
+  const forecast = parseNumeric(event.forecast_value);
+  const previous = parseNumeric(event.previous_value);
+  const baseSurprise = safeSurprise(actual, forecast) ?? safeSurprise(actual, previous);
+  if (baseSurprise == null) return null;
+
+  const direction = inferEventSignalDirection(event.title);
+  const directional = direction === "LOWER_IS_BULLISH" ? baseSurprise * -1 : baseSurprise;
+  const weight = EVENT_IMPACT_WEIGHTS[event.impact];
+  const contribution = directional * weight;
+
+  return {
+    contribution,
+    label: `${event.title} (${contribution > 0 ? "+" : ""}${contribution.toFixed(2)})`,
+  };
+}
+
 function computeCurrencySnapshot(
   currency: string,
   indicators: MacroIndicatorRow[],
+  economicEvents: EconomicEventRow[],
   latestEvent: CentralBankEventRow | undefined,
   computedAt: string
 ): BiasSnapshot {
@@ -85,13 +143,21 @@ function computeCurrencySnapshot(
     });
   }
 
-  const totalWeight = indicators.reduce((sum, item) => sum + IMPORTANCE_WEIGHTS[item.importance], 0);
+  for (const event of economicEvents) {
+    const eventContribution = toEconomicEventContribution(event);
+    if (!eventContribution) continue;
+    weighted.push(eventContribution);
+  }
+
+  const indicatorWeight = indicators.reduce((sum, item) => sum + IMPORTANCE_WEIGHTS[item.importance], 0);
+  const eventWeight = economicEvents.reduce((sum, item) => sum + EVENT_IMPACT_WEIGHTS[item.impact], 0);
+  const totalWeight = indicatorWeight + eventWeight;
   const indicatorScoreRaw = weighted.reduce((sum, item) => sum + item.contribution, 0);
   const indicatorScore = totalWeight > 0 ? indicatorScoreRaw / totalWeight : 0;
   const toneAdjustment = getToneAdjustment(latestEvent?.outcome_tone ?? null);
   const score = clamp(indicatorScore + toneAdjustment, -1, 1);
   const confidence = clamp(
-    0.35 + Math.min(0.35, Math.abs(score) * 0.35) + Math.min(0.25, indicators.length * 0.05),
+    0.35 + Math.min(0.35, Math.abs(score) * 0.35) + Math.min(0.25, (indicators.length + economicEvents.length) * 0.04),
     0.35,
     0.95
   );
@@ -202,7 +268,16 @@ export function recomputeCurrencyBiases() {
     )
     .all() as CentralBankEventRow[];
 
-  console.log(`[currency-bias] recomputing biases: ${indicatorRows.length} macro indicators, ${bankRows.length} central bank events available`);
+  const economicRows = db
+    .prepare(
+      `SELECT title, currency, impact, actual_value, forecast_value, previous_value, scheduled_at
+       FROM economic_events
+       WHERE actual_value IS NOT NULL
+       ORDER BY scheduled_at DESC`
+    )
+    .all() as EconomicEventRow[];
+
+  console.log(`[currency-bias] recomputing biases: ${indicatorRows.length} macro indicators, ${economicRows.length} economic events, ${bankRows.length} central bank events available`);
 
   const insertSnapshot = db.prepare(
     `INSERT INTO currency_bias_snapshots (currency, score, bias, confidence, drivers, computed_at)
@@ -215,9 +290,10 @@ export function recomputeCurrencyBiases() {
     for (const code of SUPPORTED_CURRENCIES) {
       const currency = code as string;
       const indicators = indicatorRows.filter((row) => row.currency === currency).slice(0, 8);
+      const events = economicRows.filter((row) => row.currency === currency).slice(0, 6);
       const latestEvent = bankRows.find((row) => row.currency === currency);
 
-      const snapshot = computeCurrencySnapshot(currency, indicators, latestEvent, computedAt);
+      const snapshot = computeCurrencySnapshot(currency, indicators, events, latestEvent, computedAt);
       insertSnapshot.run(
         snapshot.currency,
         snapshot.score,
@@ -228,13 +304,19 @@ export function recomputeCurrencyBiases() {
       );
       
       const indicatorNames = indicators.map((i) => i.indicator_name).join(", ") || "(none)";
+      const eventCount = events.length;
       const eventTone = latestEvent?.outcome_tone ? ` + event:${latestEvent.outcome_tone}` : "";
-      console.log(`  [${currency}] ${snapshot.bias} (score ${snapshot.score.toFixed(2)}, conf ${(snapshot.confidence * 100).toFixed(0)}%) | indicators: ${indicatorNames}${eventTone}`);
+      console.log(`  [${currency}] ${snapshot.bias} (score ${snapshot.score.toFixed(2)}, conf ${(snapshot.confidence * 100).toFixed(0)}%) | indicators: ${indicatorNames} | events: ${eventCount}${eventTone}`);
       
       snapshots.push(snapshot);
     }
   });
 
   computeAndPersist();
-  return snapshots.sort((a, b) => b.score - a.score);
+  return {
+    rows: snapshots.sort((a, b) => b.score - a.score),
+    macroIndicatorsCount: indicatorRows.length,
+    economicEventsCount: economicRows.length,
+    centralBankEventsCount: bankRows.length,
+  };
 }
