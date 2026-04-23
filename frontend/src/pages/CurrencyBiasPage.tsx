@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "../hooks/useQuery";
 import { currencyBiasService } from "../services/currency-bias.service";
+import { getOperatorSettings } from "../services/settings.service";
 import type { BiasBreakdown, CurrencyBiasHistoryMap, CurrencyBiasSnapshot } from "../types";
 import styles from "./EventsPage.module.css";
 
@@ -22,10 +23,11 @@ function parseBreakdown(raw: string | null): BiasBreakdown | null {
 interface BreakdownBarProps {
   label: string;
   value: number;
+  maxRange: number;
 }
 
-function BreakdownBar({ label, value }: BreakdownBarProps) {
-  const MAX = 0.5;
+function BreakdownBar({ label, value, maxRange }: BreakdownBarProps) {
+  const MAX = Math.max(0.1, maxRange);
   const halfPct = Math.min(Math.abs(value) / MAX, 1) * 50;
   const positive = value >= 0;
   const barColor = positive ? "#16a34a" : "#dc2626";
@@ -63,6 +65,7 @@ interface BreakdownPanelProps {
 
 function BreakdownPanel({ row }: BreakdownPanelProps) {
   const bd = parseBreakdown(row.breakdown);
+  const settings = getOperatorSettings();
 
   if (!bd) {
     return (
@@ -80,13 +83,13 @@ function BreakdownPanel({ row }: BreakdownPanelProps) {
         <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "0.55rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
           Score Breakdown — {row.currency}
         </p>
-        <BreakdownBar label="Macro indicators" value={bd.macro} />
-        <BreakdownBar label="Economic events" value={bd.events} />
-        <BreakdownBar label="Central bank tone" value={bd.centralBank} />
-        <BreakdownBar label="Risk sentiment" value={bd.riskSentiment} />
-        <BreakdownBar label="Positioning" value={bd.positioning} />
+        <BreakdownBar label="Macro indicators" value={bd.macro} maxRange={settings.biasBarMax} />
+        <BreakdownBar label="Economic events" value={bd.events} maxRange={settings.biasBarMax} />
+        <BreakdownBar label="Central bank tone" value={bd.centralBank} maxRange={settings.biasBarMax} />
+        <BreakdownBar label="Risk sentiment" value={bd.riskSentiment} maxRange={settings.biasBarMax} />
+        <BreakdownBar label="Positioning" value={bd.positioning} maxRange={settings.biasBarMax} />
         <div style={{ marginTop: "0.45rem", borderTop: "1px solid #e2e8f0", paddingTop: "0.45rem" }}>
-          <BreakdownBar label="Total (pre-clamp)" value={total} />
+          <BreakdownBar label="Total (pre-clamp)" value={total} maxRange={settings.biasBarMax} />
         </div>
         {row.drivers && (
           <p style={{ marginTop: "0.5rem", fontSize: "0.78rem", color: "var(--text-muted)" }}>

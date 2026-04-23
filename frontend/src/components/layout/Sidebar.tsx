@@ -7,6 +7,7 @@ const primaryLinks = [
   { to: "/currencies", label: "Currencies", icon: "💱" },
   { to: "/pairs", label: "Pairs", icon: "🔗" },
   { to: "/events", label: "Events Calendar", icon: "📅" },
+  { to: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
 const marketInputLinks = [

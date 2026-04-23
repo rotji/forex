@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -14,8 +15,15 @@ import { DataImportPage } from "./pages/DataImportPage";
 import { CurrencyBiasPage } from "./pages/CurrencyBiasPage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { AlertDetailPage } from "./pages/AlertDetailPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { applyThemeAccent, getOperatorSettings } from "./services/settings.service";
 
 export default function App() {
+  useEffect(() => {
+    const settings = getOperatorSettings();
+    applyThemeAccent(settings.themeAccent);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -34,6 +42,7 @@ export default function App() {
           <Route path="currency-bias" element={<CurrencyBiasPage />} />
           <Route path="alerts" element={<AlertsPage />} />
           <Route path="alerts/:id" element={<AlertDetailPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

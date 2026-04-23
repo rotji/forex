@@ -2,6 +2,7 @@ import { Fragment, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "../hooks/useQuery";
 import { alertsService } from "../services/alerts.service";
+import { getOperatorSettings } from "../services/settings.service";
 import type { AlertStatus, TradeAlert } from "../types";
 import styles from "./EventsPage.module.css";
 
@@ -13,6 +14,7 @@ const directionClass: Record<string, string> = {
 
 export function AlertsPage() {
   const navigate = useNavigate();
+  const settings = getOperatorSettings();
   const [statusFilter, setStatusFilter] = useState<AlertStatus>("ACTIVE");
   const fetcher = useCallback(() => alertsService.getByStatus(statusFilter), [statusFilter]);
   const { data, loading, error, refetch } = useQuery<TradeAlert[]>(fetcher);
@@ -32,6 +34,14 @@ export function AlertsPage() {
       return !q || row.pair_symbol.toLowerCase().includes(q) || (row.rationale ?? "").toLowerCase().includes(q);
     });
   }, [data, searchText]);
+
+  function freshnessLabel(row: TradeAlert): { label: string; className: string } {
+    const ageHours = Math.max(0, (Date.now() - new Date(row.triggered_at).getTime()) / (1000 * 60 * 60));
+    const threshold = settings.alertFreshnessHours;
+    if (ageHours <= threshold * 0.5) return { label: "Fresh", className: styles.low };
+    if (ageHours <= threshold) return { label: "Aging", className: styles.medium };
+    return { label: "Stale", className: styles.high };
+  }
 
   async function handleGenerateAlerts() {
     setActionError(null);
@@ -169,6 +179,7 @@ export function AlertsPage() {
               <th>Confidence</th>
               <th>Why</th>
               <th>Triggered</th>
+              <th>Freshness</th>
               <th>Expires</th>
               <th>Actions</th>
             </tr>
@@ -194,6 +205,11 @@ export function AlertsPage() {
                     </button>
                   </td>
                   <td>{new Date(row.triggered_at).toLocaleString()}</td>
+                  <td>
+                    <span className={`${styles.impact} ${freshnessLabel(row).className}`}>
+                      {freshnessLabel(row).label}
+                    </span>
+                  </td>
                   <td>{row.expires_at ? new Date(row.expires_at).toLocaleString() : "-"}</td>
                   <td>
                     {row.status === "ACTIVE" ? (
@@ -212,7 +228,7 @@ export function AlertsPage() {
                 </tr>
                 {expandedId === row.id && (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={8}>
                       <div className={styles.meta}>
                         <strong>{row.base_currency ?? "Base"}</strong> bias score: {row.base_score?.toFixed(2) ?? "-"}; <strong>{row.quote_currency ?? "Quote"}</strong> bias score: {row.quote_score?.toFixed(2) ?? "-"}; divergence: {row.score_diff?.toFixed(2) ?? "-"}.
                         {row.rationale ? ` ${row.rationale}` : ""}
