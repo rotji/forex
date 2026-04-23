@@ -46,6 +46,11 @@ export function getTradeAlerts(status: "ACTIVE" | "ACKNOWLEDGED" | "EXPIRED" | "
     .all(status, limit);
 }
 
+export function getTradeAlertById(id: number) {
+  const db = getDb();
+  return db.prepare("SELECT * FROM trade_alerts WHERE id = ?").get(id);
+}
+
 function buildAlertFromPair(pair: string, biasMap: Map<string, LatestBiasRow>): GeneratedAlert | null {
   const parts = pair.split("/");
   if (parts.length !== 2 || !parts[0] || !parts[1]) return null;

@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery } from "../hooks/useQuery";
 import { alertsService } from "../services/alerts.service";
 import type { AlertStatus, TradeAlert } from "../types";
@@ -11,6 +12,7 @@ const directionClass: Record<string, string> = {
 };
 
 export function AlertsPage() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<AlertStatus>("ACTIVE");
   const fetcher = useCallback(() => alertsService.getByStatus(statusFilter), [statusFilter]);
   const { data, loading, error, refetch } = useQuery<TradeAlert[]>(fetcher);
@@ -175,7 +177,7 @@ export function AlertsPage() {
             {filtered.map((row) => (
               <Fragment key={row.id}>
                 <tr>
-                  <td><strong>{row.pair_symbol}</strong></td>
+                  <td><button style={{background: "none", border: "none", cursor: "pointer", color: "var(--text)", fontWeight: "700", textDecoration: "underline"}} onClick={() => navigate(`/alerts/${row.id}`)}><strong>{row.pair_symbol}</strong></button></td>
                   <td>
                     <span className={`${styles.impact} ${directionClass[row.direction] ?? ""}`}>
                       {row.direction}

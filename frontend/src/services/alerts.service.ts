@@ -10,6 +10,7 @@ import type {
 export const alertsService = {
   getByStatus: (status: AlertStatus) => api.get<TradeAlert[]>(`/alerts?status=${status}`),
   getActive: () => api.get<TradeAlert[]>("/alerts?status=ACTIVE"),
+  getById: (id: number) => api.get<TradeAlert>(`/alerts/${id}`),
   generate: () => api.post<GenerateAlertsResponse, Record<string, never>>("/alerts/generate", {}),
   acknowledge: (id: number) => api.post<TradeAlert, Record<string, never>>(`/alerts/${id}/acknowledge`, {}),
   acknowledgeBulk: (ids: number[]) =>

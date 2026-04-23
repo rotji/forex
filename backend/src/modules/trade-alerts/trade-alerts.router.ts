@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import {
   getTradeAlerts,
+  getTradeAlertById,
   generateTradeAlertsFromBiases,
   acknowledgeTradeAlert,
   acknowledgeTradeAlerts,
@@ -30,6 +31,22 @@ router.post("/generate", (_req: Request, res: Response) => {
     generatedAt: new Date().toISOString(),
     alerts,
   });
+});
+
+router.get("/:id", (req: Request, res: Response) => {
+  const id = parseInt(req.params.id as string, 10);
+  if (Number.isNaN(id) || id <= 0) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const alert = getTradeAlertById(id);
+  if (!alert) {
+    res.status(404).json({ error: "Alert not found" });
+    return;
+  }
+
+  res.json(alert);
 });
 
 router.post("/:id/acknowledge", (req: Request, res: Response) => {

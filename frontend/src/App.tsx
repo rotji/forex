@@ -13,6 +13,7 @@ import { PositioningPage } from "./pages/PositioningPage";
 import { DataImportPage } from "./pages/DataImportPage";
 import { CurrencyBiasPage } from "./pages/CurrencyBiasPage";
 import { AlertsPage } from "./pages/AlertsPage";
+import { AlertDetailPage } from "./pages/AlertDetailPage";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="data-import" element={<DataImportPage />} />
           <Route path="currency-bias" element={<CurrencyBiasPage />} />
           <Route path="alerts" element={<AlertsPage />} />
+          <Route path="alerts/:id" element={<AlertDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
