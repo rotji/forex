@@ -189,6 +189,7 @@ export interface RecomputeBiasResponseRow {
 
 export interface RecomputeBiasResponse {
   count: number;
+  generatedAlertsCount: number;
   computedAt: string;
   rows: RecomputeBiasResponseRow[];
 }

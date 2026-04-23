@@ -67,7 +67,10 @@ export async function runSignalEngineCycle(): Promise<SignalEngineCycleResult> {
       biasCount: biasRows.length,
       generatedAlertsCount: alerts.length,
     });
-    console.log(`[signal-engine] ingestion provider=${ingestionResult.provider} inserted=${ingestionResult.macroInserted + ingestionResult.cbInserted} updated=${ingestionResult.macroUpdated + ingestionResult.cbUpdated} skipped=${ingestionResult.macroSkipped + ingestionResult.cbSkipped} err=${ingestionResult.error ?? "none"}; expired ${expired} stale alerts, cleaned ${cleaned} archived alerts, recomputed ${biasRows.length} currency biases, generated ${alerts.length} alerts`);
+    console.log(`\n[signal-engine] cycle summary (${durationMs}ms)`);
+    console.log(`  ingestion: provider=${ingestionResult.provider} inserted=${ingestionResult.macroInserted + ingestionResult.cbInserted} updated=${ingestionResult.macroUpdated + ingestionResult.cbUpdated} skipped=${ingestionResult.macroSkipped + ingestionResult.cbSkipped} err=${ingestionResult.error ?? "none"}`);
+    console.log(`  alerts: expired ${expired} stale, cleaned ${cleaned} archived, generated ${alerts.length} new`);
+    console.log(`  biases: recomputed ${biasRows.length} currencies\n`);
     return {
       success: true,
       startedAt: startedAtIso,

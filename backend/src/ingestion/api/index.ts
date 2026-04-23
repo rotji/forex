@@ -95,10 +95,30 @@ function buildMockIngestionPayload(): IngestionPayload {
 	};
 }
 
+function buildManualOnlyPayload(): IngestionPayload {
+	const fetchedAt = new Date().toISOString();
+	return {
+		provider: "manual-only",
+		fetchedAt,
+		macroIndicators: [],
+		centralBankEvents: [],
+	};
+}
+
 export async function fetchIngestionPayloadFromProviders(): Promise<IngestionPayload> {
+	const mode = (process.env.INGESTION_MODE ?? "manual").toLowerCase();
+
+	if (mode === "manual") {
+		return buildManualOnlyPayload();
+	}
+
 	if (process.env.INGESTION_MOCK_FAIL === "1") {
 		throw new Error("Forced ingestion provider failure");
 	}
-	// Adapter scaffold. Replace this with real provider clients in production.
-	return buildMockIngestionPayload();
+
+	if (mode === "mock") {
+		return buildMockIngestionPayload();
+	}
+
+	throw new Error(`Unsupported INGESTION_MODE: ${mode}`);
 }

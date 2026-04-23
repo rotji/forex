@@ -16,6 +16,7 @@ async function bootModules() {
 test.before(() => {
   process.env.DB_PATH = dbPath;
   process.env.SIGNAL_ENGINE_INTERVAL_MS = "600000";
+  process.env.INGESTION_MODE = "mock";
 });
 
 test("normalization handles valid inputs", async () => {

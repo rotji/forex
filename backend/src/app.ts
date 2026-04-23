@@ -5,6 +5,7 @@ import { requestLogger } from "./shared/middleware/requestLogger";
 import { httpLogger } from "./shared/middleware/httpLogger";
 import { globalRateLimiter } from "./shared/middleware/rateLimiter";
 import { errorHandler } from "./shared/middleware/errorHandler";
+import { env } from "./config/env";
 import currenciesRouter from "./modules/currencies/currencies.router";
 import pairsRouter from "./modules/currency-pairs/currency-pairs.router";
 import eventsRouter from "./modules/economic-events/economic-events.router";
@@ -21,7 +22,9 @@ const app = express();
 // Security
 app.use(helmet());
 app.use(cors());
-app.use(globalRateLimiter);
+if (env.NODE_ENV !== "development") {
+  app.use(globalRateLimiter);
+}
 
 // Body parsing
 app.use(express.json());

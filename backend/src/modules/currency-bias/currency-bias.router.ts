@@ -6,6 +6,7 @@ import {
   getCurrencyBiasHistoryMap,
   recomputeCurrencyBiases,
 } from "./currency-bias.service";
+import { generateTradeAlertsFromBiases } from "../trade-alerts/trade-alerts.service";
 import { isValidCurrencyCode } from "../../ingestion/validation";
 
 const router = Router();
@@ -16,8 +17,10 @@ router.get("/", (_req: Request, res: Response) => {
 
 router.post("/recompute", (_req: Request, res: Response) => {
   const rows = recomputeCurrencyBiases();
+  const alerts = generateTradeAlertsFromBiases();
   res.status(201).json({
     count: rows.length,
+    generatedAlertsCount: alerts.length,
     computedAt: new Date().toISOString(),
     rows,
   });

@@ -98,6 +98,8 @@ export function generateTradeAlertsFromBiases() {
   const biasMap = new Map(latestBiases.map((row) => [row.currency, row]));
   const generated: GeneratedAlert[] = [];
 
+  console.log(`[trade-alerts] generating alerts from ${latestBiases.length} latest currency biases`);
+
   const insertAlert = db.prepare(
     `INSERT INTO trade_alerts (
       pair_symbol,
@@ -132,6 +134,7 @@ export function generateTradeAlertsFromBiases() {
         alert.rationale,
         alert.expiresAt
       );
+      console.log(`  [${alert.pairSymbol}] ${alert.direction} (conf ${(alert.confidence * 100).toFixed(0)}%) diff=${alert.scoreDiff.toFixed(2)}`);
       generated.push(alert);
     }
   });

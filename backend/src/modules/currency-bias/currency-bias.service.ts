@@ -202,6 +202,8 @@ export function recomputeCurrencyBiases() {
     )
     .all() as CentralBankEventRow[];
 
+  console.log(`[currency-bias] recomputing biases: ${indicatorRows.length} macro indicators, ${bankRows.length} central bank events available`);
+
   const insertSnapshot = db.prepare(
     `INSERT INTO currency_bias_snapshots (currency, score, bias, confidence, drivers, computed_at)
      VALUES (?, ?, ?, ?, ?, ?)`
@@ -224,6 +226,11 @@ export function recomputeCurrencyBiases() {
         snapshot.drivers,
         snapshot.computedAt
       );
+      
+      const indicatorNames = indicators.map((i) => i.indicator_name).join(", ") || "(none)";
+      const eventTone = latestEvent?.outcome_tone ? ` + event:${latestEvent.outcome_tone}` : "";
+      console.log(`  [${currency}] ${snapshot.bias} (score ${snapshot.score.toFixed(2)}, conf ${(snapshot.confidence * 100).toFixed(0)}%) | indicators: ${indicatorNames}${eventTone}`);
+      
       snapshots.push(snapshot);
     }
   });

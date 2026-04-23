@@ -31,7 +31,9 @@ export function CurrencyBiasPage() {
     setRecomputing(true);
     try {
       const result = await currencyBiasService.recompute();
-      setActionMessage(`Recomputed ${result.count} currency biases.`);
+      setActionMessage(
+        `Recomputed ${result.count} currency biases and generated ${result.generatedAlertsCount} alerts.`
+      );
       refetch();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : "Failed to recompute bias.");

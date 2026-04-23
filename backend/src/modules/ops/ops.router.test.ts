@@ -37,6 +37,7 @@ test.before(() => {
   process.env.DB_PATH = dbPath;
   process.env.SIGNAL_ENGINE_INTERVAL_MS = "600000";
   process.env.OPS_RUN_KEY = "test-key";
+  process.env.INGESTION_MODE = "mock";
   process.env.INGESTION_MOCK_FAIL = "0";
 });
 
