@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "../hooks/useQuery";
 import { currencyBiasService } from "../services/currency-bias.service";
-import type { BiasBreakdown, CurrencyBiasSnapshot } from "../types";
+import type { BiasBreakdown, CurrencyBiasHistoryMap, CurrencyBiasSnapshot } from "../types";
 import styles from "./EventsPage.module.css";
 
 const biasClass: Record<string, string> = {
@@ -100,7 +100,10 @@ function BreakdownPanel({ row }: BreakdownPanelProps) {
 
 export function CurrencyBiasPage() {
   const fetcher = useCallback(() => currencyBiasService.getLatest(), []);
+  const [trendWindow, setTrendWindow] = useState<7 | 14 | 30>(14);
+  const fetchHistory = useCallback(() => currencyBiasService.getHistoryMap(trendWindow), [trendWindow]);
   const { data, loading, error, refetch } = useQuery<CurrencyBiasSnapshot[]>(fetcher);
+  const history = useQuery<CurrencyBiasHistoryMap>(fetchHistory);
   const [searchText, setSearchText] = useState("");
   const [recomputing, setRecomputing] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -114,6 +117,37 @@ export function CurrencyBiasPage() {
     });
   }, [data, searchText]);
 
+  const trendRows = useMemo(() => {
+    return [...filtered]
+      .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
+      .slice(0, 8);
+  }, [filtered]);
+
+  function sparklinePoints(currency: string): string {
+    const rows = (history.data?.[currency] ?? []).slice().reverse();
+    if (rows.length < 2) return "";
+
+    const width = 150;
+    const height = 40;
+
+    return rows
+      .map((row, i) => {
+        const x = (i / (rows.length - 1)) * width;
+        const y = ((1 - (row.score + 1) / 2) * (height - 6)) + 3;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+  }
+
+  function trendDelta(currency: string): number | null {
+    const rows = (history.data?.[currency] ?? []).slice().reverse();
+    if (rows.length < 2) return null;
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    if (!first || !last) return null;
+    return last.score - first.score;
+  }
+
   async function handleRecompute() {
     setActionError(null);
     setActionMessage(null);
@@ -124,6 +158,7 @@ export function CurrencyBiasPage() {
         `Recomputed ${result.count} currency snapshots using ${result.macroIndicatorsCount} macro indicators, ${result.economicEventsCount} economic events, ${result.centralBankEventsCount} central bank events, ${result.riskSentimentCount} risk sentiment snapshots, and ${result.positioningCount} positioning snapshots; generated ${result.generatedAlertsCount} alerts.`
       );
       refetch();
+      history.refetch();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : "Failed to recompute bias.");
     } finally {
@@ -154,6 +189,65 @@ export function CurrencyBiasPage() {
         </div>
         {actionMessage && <p className={styles.success}>{actionMessage}</p>}
         {actionError && <p className={styles.error}>{actionError}</p>}
+      </section>
+
+      <section className={styles.filterCard}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+          <h2 className={styles.filterTitle} style={{ marginBottom: 0 }}>
+            Bias Trend Charts (Last {trendWindow} Snapshots)
+          </h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+            <span className={styles.meta} style={{ marginTop: 0 }}>Window</span>
+            <select
+              className={styles.select}
+              style={{ minWidth: "88px", padding: "0.42rem 0.62rem" }}
+              value={trendWindow}
+              onChange={(e) => setTrendWindow(Number(e.target.value) as 7 | 14 | 30)}
+            >
+              <option value={7}>7</option>
+              <option value={14}>14</option>
+              <option value={30}>30</option>
+            </select>
+          </div>
+        </div>
+        {history.loading ? (
+          <p className={styles.meta}>Loading trend charts...</p>
+        ) : history.error ? (
+          <p className={styles.error}>Trend data error: {history.error}</p>
+        ) : trendRows.length === 0 ? (
+          <p className={styles.meta}>No trend data available.</p>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "0.75rem" }}>
+            {trendRows.map((row) => {
+              const points = sparklinePoints(row.currency);
+              const delta = trendDelta(row.currency);
+              const deltaColor = delta == null ? "var(--text-muted)" : delta >= 0 ? "#166534" : "#991b1b";
+
+              return (
+                <div key={`${row.currency}-trend`} style={{ border: "1px solid var(--border)", borderRadius: "12px", padding: "0.6rem", background: "#ffffff" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
+                    <strong>{row.currency}</strong>
+                    <span className={`${styles.impact} ${biasClass[row.bias] ?? ""}`}>{row.bias}</span>
+                  </div>
+                  {points ? (
+                    <svg viewBox="0 0 150 40" width="100%" height="42" aria-label={`${row.currency} bias trend`}>
+                      <line x1="0" y1="20" x2="150" y2="20" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 3" />
+                      <polyline points={points} fill="none" stroke="#0f766e" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
+                  ) : (
+                    <p className={styles.meta}>Not enough history yet.</p>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.2rem" }}>
+                    <span className={styles.meta}>Now: {row.score.toFixed(2)}</span>
+                    <span style={{ fontSize: "0.82rem", fontWeight: 700, color: deltaColor }}>
+                      {delta == null ? "Delta: -" : `Delta: ${delta > 0 ? "+" : ""}${delta.toFixed(2)}`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {filtered.length === 0 ? (
